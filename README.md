@@ -8,6 +8,16 @@
 
 Paste one URL into any MCP-capable chatbot (Claude, ChatGPT, Cursor) and the agent gets money with a cap plus a catalog of paid capabilities. It can enrich a company for 3¢, order a burger through DoorDash's CLI, and book an Uber — and it **stops itself** the moment a purchase would break the budget.
 
+## Connect it
+
+Live remote MCP endpoint: **`https://intendr-edge.almahmud-zero.workers.dev/mcp`**
+
+```bash
+claude mcp add --transport http intendr https://intendr-edge.almahmud-zero.workers.dev/mcp
+```
+
+Or add that URL as an HTTP MCP server in ChatGPT / Cursor. Then ask your agent to `search_services`, `get_service`, and `pay_and_run`. The hosted demo shares one Orthogonal-backed wallet; to use **your own** key/wallet, run the stdio connector locally — see [`apps/mcp/README.md`](apps/mcp/README.md).
+
 ## Why
 
 AI agents can increasingly *do* things that cost money, but there's no safe, portable way to hand one a budget. Giving an agent your card is reckless; wiring bespoke payment + limits into every chatbot is toil. intendr is the missing layer: a single MCP endpoint offering (1) a spend-capped wallet, (2) a catalog of paid capabilities spanning data + commerce, and (3) governance — reserve→settle budgeting, approval gates for expensive or real-world actions, and per-category/merchant limits.
