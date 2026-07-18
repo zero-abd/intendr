@@ -44,12 +44,16 @@ bun install          # install + link workspaces
 bun run typecheck    # tsc --noEmit across all packages
 bun run dev          # turbo: landing + web (Vite) + edge (wrangler dev)
 
-bun --cwd apps/edge run dev     # just the Worker (MCP + API) at http://localhost:8787
-bun --cwd apps/web run dev      # just the dashboard
-bun --cwd apps/landing run dev  # just the marketing site
+bun run --cwd apps/edge dev     # just the Worker (MCP + API) at http://localhost:8787
+bun run --cwd apps/web dev      # just the dashboard (needs apps/web/.env.local — see below)
+bun run --cwd apps/landing dev  # just the marketing site
 
-ORTHOGONAL_API_KEY=sk-... bun --cwd apps/mcp run start   # the MCP connector (stdio) other agents add
+ORTHOGONAL_API_KEY=sk-... bun run --cwd apps/mcp start   # the MCP connector (stdio) other agents add
 ```
+
+> **Heads up (bun 1.3.x):** put per-app flags **after** `run` — `bun run --cwd apps/web build`. The older `bun --cwd apps/web run build` form is misparsed and just prints bun's help. From the repo root you can also target one app via turbo: `bun run build --filter '@intendr/web'`.
+
+The **dashboard (`apps/web`) needs Supabase env** to leave its onboarding screen: copy `apps/web/.env.example` → `apps/web/.env.local` and fill `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (anon/publishable key). Full local setup + schema steps: [`docs/MONOREPO.md`](docs/MONOREPO.md#running-appsweb-locally).
 
 **MCP connector** (`apps/mcp`): a real stdio MCP server any agent can add (Claude Desktop/Code, Cursor, …). It exposes the **entire Orthogonal catalog** (discovered at runtime via `search_services` → `get_service` → `pay_and_run`) plus commerce providers (Uber, DoorDash) — all metered through the spend-capped wallet. See [`apps/mcp/README.md`](apps/mcp/README.md).
 
