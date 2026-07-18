@@ -10,13 +10,15 @@ Paste one URL into any MCP-capable chatbot (Claude, ChatGPT, Cursor) and the age
 
 ## Connect it
 
-Live remote MCP endpoint: **`https://intendr-edge.almahmud-zero.workers.dev/mcp`**
+One command — no key, no config:
 
 ```bash
-claude mcp add --transport http intendr https://intendr-edge.almahmud-zero.workers.dev/mcp
+claude mcp add intendr -- npx -y intendr
 ```
 
-Or add that URL as an HTTP MCP server in ChatGPT / Cursor. Then ask your agent to `search_services`, `get_service`, and `pay_and_run`. The hosted demo shares one Orthogonal-backed wallet; to use **your own** key/wallet, run the stdio connector locally — see [`apps/mcp/README.md`](apps/mcp/README.md).
+Or add it as a stdio MCP server in Cursor / ChatGPT desktop: `command: npx`, `args: ["-y", "intendr"]`. Then ask your agent to `search_services`, `get_service`, and `pay_and_run`.
+
+intendr runs **one shared Orthogonal key + spend-capped wallet server-side** — users bring nothing. (Per-user identity & billing via OAuth is on the roadmap.) The connector is a thin proxy to the hosted Worker; see [`apps/mcp/README.md`](apps/mcp/README.md).
 
 ## Why
 

@@ -1,49 +1,44 @@
-# @intendr/mcp-server
+# intendr
 
-The intendr **MCP connector** (stdio). Add it to any MCP-capable agent and it gets a
-spend-capped wallet that can pay for **Orthogonal's entire catalog** (discovered at
-runtime) plus commerce providers (Uber, DoorDash) — with reserve→settle budgeting,
-per-call approval, and side-effect gates.
+The **MCP connector** for [intendr](https://github.com/zero-abd/intendr) — give any AI agent a
+spend-capped wallet that can pay for the **Orthogonal** API catalog (company enrichment,
+people/lead search, funding, news, email verification, …) plus commerce providers, all under
+budget guardrails.
+
+It's a thin stdio proxy to the hosted intendr service, which holds the shared Orthogonal key
+and the spend-capped wallet **server-side** — you bring nothing: no key, no config.
+
+## Install
+
+```bash
+claude mcp add intendr -- npx -y intendr
+```
+
+Or in any MCP client (Cursor, ChatGPT desktop, …), add a stdio server:
+
+```json
+{
+  "mcpServers": {
+    "intendr": { "command": "npx", "args": ["-y", "intendr"] }
+  }
+}
+```
+
+Then ask your agent to `search_services`, `get_service`, and `pay_and_run`.
 
 ## Tools
 
 | Tool | What it does |
 |---|---|
-| `get_wallet` | balance, caps, remaining budget |
-| `search_services` | search the Orthogonal catalog (+ providers) by natural language |
-| `get_service` | price + side-effect + input schema for one capability |
-| `pay_and_run` | pay for and execute a capability under the wallet's controls |
-| `get_spend_summary` | spent / remaining / overspend blocked |
+| `search_services` | search the Orthogonal catalog (+ commerce) by natural language |
+| `get_service` | price + side-effect + input schema (query/body/path) for a capability |
+| `pay_and_run` | pay for and execute a capability under the wallet's spend controls |
+| `get_wallet` / `get_spend_summary` | balance, caps, spend, remaining |
 | `approve` | approve / raise_cap / skip a gated payment |
 
-## Run
+## Config
 
-```bash
-export ORTHOGONAL_API_KEY=sk-ortho-...     # required for the Orthogonal tools
-# optional: INTENDR_GLOBAL_CAP_CENTS, INTENDR_OPENING_BALANCE_CENTS, INTENDR_PER_CALL_WARN_CENTS
-bun --cwd apps/mcp run start
-```
+- `INTENDR_URL` — override the hosted endpoint (defaults to the public intendr Worker).
 
-Inspect it locally:
-
-```bash
-bun --cwd apps/mcp run inspect     # opens the MCP Inspector
-```
-
-## Add to an agent (example: Claude Desktop / Cursor `mcpServers`)
-
-```json
-{
-  "mcpServers": {
-    "intendr": {
-      "command": "bun",
-      "args": ["run", "C:/Users/conne/Desktop/Projects/intendr/apps/mcp/src/index.ts"],
-      "env": { "ORTHOGONAL_API_KEY": "sk-ortho-...", "INTENDR_GLOBAL_CAP_CENTS": "4500" }
-    }
-  }
-}
-```
-
-The wallet state persists for the life of the process, so spend accumulates across tool
-calls and the caps actually bite. (Cross-restart / multi-user persistence is the Worker +
-Durable Object path — see `apps/edge` and `docs/MONOREPO.md`.)
+> Per-user identity & billing via OAuth is on the roadmap; today all traffic shares one
+> server-side Orthogonal key + wallet.
