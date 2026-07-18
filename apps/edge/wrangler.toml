@@ -13,5 +13,10 @@ class_name = "WalletDO"
 tag = "v1"
 new_sqlite_classes = ["WalletDO"]
 
-# Secret (set out-of-band, never committed):
-#   echo "<key>" | wrangler secret put ORTHOGONAL_API_KEY
+# Secrets (set out-of-band, never committed):
+#   echo "<key>"        | wrangler secret put ORTHOGONAL_API_KEY
+#   printf '%s' "<url>" | wrangler secret put SUPABASE_URL
+#   printf '%s' "<key>" | wrangler secret put SUPABASE_SERVICE_KEY   # service_role
+#
+# The wallet + transactions now live in the shared Supabase project (see supabase/schema.sql).
+# WALLET_DO below is vestigial (superseded by Supabase) — safe to remove in a later migration.
