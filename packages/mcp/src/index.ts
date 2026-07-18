@@ -105,14 +105,25 @@ export function buildTools(deps: McpDeps): ToolDef[] {
           return { status: "error", reason: `missing required argument(s): ${missing.join(", ")}` };
         }
 
+        // Confirmation for a write can arrive as top-level `confirm` or inside `body.confirm`.
+        const body = params.body as Record<string, unknown> | undefined;
+        const confirmed = params.confirm === true || body?.confirm === true;
+
         const verdict = checkGuardrails(guardrails, state, {
           provider: provider.name,
           category,
           cents: details.priceCents,
           sideEffect: details.sideEffect,
+          confirmed,
         });
         if (!verdict.allow) {
-          return { status: "BLOCKED", reason: verdict.reason, needsApproval: verdict.needsApproval };
+          // Surface a live, no-charge preview (e.g. a cart total) so the user can approve
+          // with full context, if the provider supports it.
+          let preview: unknown;
+          if (verdict.needsApproval && provider.preview) {
+            preview = await provider.preview(id, params).catch((e) => ({ previewError: String(e) }));
+          }
+          return { status: "BLOCKED", reason: verdict.reason, needsApproval: verdict.needsApproval, preview };
         }
 
         const check = await budget.checkEstimate(workspaceId, details.priceCents);

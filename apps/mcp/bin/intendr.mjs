@@ -140,8 +140,14 @@ server.tool(
 );
 server.tool(
   "pay_and_run",
-  "Pay for and execute a capability, debiting your wallet balance. Put each param in the bucket get_service lists it under: query, body, or path. Returns 'ok' with data or 'BLOCKED'.",
-  { id: z.string(), query: z.record(z.string()).optional(), body: z.record(z.any()).optional(), path: z.record(z.any()).optional() },
+  "Pay for and execute a capability under the wallet's spend controls. Put each param in the bucket get_service lists it under: query, body, or path. Returns status 'ok' with data, or 'BLOCKED' (write/over-cap). Real-world writes (e.g. amazon:buy) return BLOCKED + needsApproval with a live preview; after the user approves, re-call with confirm:true to actually execute the purchase.",
+  {
+    id: z.string(),
+    query: z.record(z.string()).optional(),
+    body: z.record(z.any()).optional(),
+    path: z.record(z.any()).optional(),
+    confirm: z.boolean().optional().describe("Set true ONLY after explicit user approval to execute a real-world write (e.g. a purchase)."),
+  },
   (args) => callRemote("pay_and_run", args),
 );
 server.tool("get_spend_summary", "Balance remaining and spend so far.", {}, () => callRemote("get_spend_summary", {}));
