@@ -84,13 +84,14 @@ server.tool(
 
 server.tool(
   "pay_and_run",
-  "Pay for and execute a capability under the wallet's spend controls (reserve → run → settle). Returns BLOCKED if a cap or the side-effect gate trips. `body`/`query` are the endpoint's params from get_service.",
+  "Pay for and execute a capability under the wallet's spend controls (reserve → run → settle). Put each param in the bucket get_service lists it under: query, body, or path. Returns status 'ok' with data, or 'BLOCKED' (write/over-cap) — then call approve and retry.",
   {
-    id: z.string(),
+    id: z.string().describe("capability id from search_services, e.g. orthogonal:company-enrich::GET::/companies/enrich"),
     body: z.record(z.unknown()).optional(),
     query: z.record(z.string()).optional(),
+    path: z.record(z.unknown()).optional(),
   },
-  ({ id, body, query }) => run("pay_and_run", { id, input: { body, query } }),
+  ({ id, body, query, path }) => run("pay_and_run", { id, input: { body, query, path } }),
 );
 
 server.tool("get_spend_summary", "Spend so far, remaining budget, and overspend blocked.", {}, () => run("get_spend_summary", {}));

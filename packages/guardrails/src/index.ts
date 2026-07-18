@@ -31,6 +31,11 @@ export function checkGuardrails(
   if (cfg.merchantAllowlist.length > 0 && !cfg.merchantAllowlist.includes(req.provider)) {
     return { allow: false, reason: `${req.provider} is not on the allowlist`, needsApproval: false };
   }
+  // Evaluate the side-effect gate BEFORE the cap: a write / real-world action must always
+  // surface as needing confirmation, so raising the cap can never silently auto-approve it.
+  if (req.sideEffect === "write") {
+    return { allow: false, reason: "write / real-world action requires confirmation", needsApproval: true };
+  }
   if (state.spentCents + req.cents > cfg.globalCapCents) {
     return { allow: false, reason: `global cap of ${cfg.globalCapCents}c would be exceeded`, needsApproval: true };
   }
@@ -40,9 +45,6 @@ export function checkGuardrails(
     if (spentInCategory + req.cents > categoryCap) {
       return { allow: false, reason: `${req.category} cap of ${categoryCap}c would be exceeded`, needsApproval: true };
     }
-  }
-  if (req.sideEffect === "write") {
-    return { allow: false, reason: "write / real-world action requires confirmation", needsApproval: true };
   }
   return { allow: true };
 }
