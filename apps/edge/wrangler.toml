@@ -19,5 +19,6 @@ new_sqlite_classes = ["WalletDO"]
 #   printf '%s' "<key>" | wrangler secret put SUPABASE_SERVICE_KEY   # service_role
 #
 # The wallet + transactions live in the shared Supabase project, per-user (auth.users.id).
-# Canonical schema: apps/web/supabase/schema.sql (+ MCP RPCs mcp_wallet / mcp_charge).
+# Canonical schema: apps/web/supabase/schema.sql; MCP RPCs mcp_wallet / mcp_charge live in
+# apps/web/supabase/003_mcp_rpcs.sql (mcp_charge debits the wallet AND writes the ledger row atomically).
 # WALLET_DO below is vestigial (superseded by Supabase) — safe to remove in a later migration.
