@@ -21,6 +21,13 @@ export interface GuardrailRequest {
   category: string;
   cents: Cents;
   sideEffect: SideEffectClass;
+  /**
+   * Explicit per-call confirmation for a write/real-world action. The stateless
+   * edge can't persist an "approved" flag between tool calls, so approval is
+   * expressed as the caller re-invoking with confirm=true after the user says yes.
+   * The cap/allowlist checks still apply — this only clears the side-effect gate.
+   */
+  confirmed?: boolean;
 }
 
 export function checkGuardrails(
@@ -33,7 +40,9 @@ export function checkGuardrails(
   }
   // Evaluate the side-effect gate BEFORE the cap: a write / real-world action must always
   // surface as needing confirmation, so raising the cap can never silently auto-approve it.
-  if (req.sideEffect === "write") {
+  // An explicit per-call confirmation (confirm=true, sent after the user approves) clears
+  // this gate; the cap and allowlist checks below still apply.
+  if (req.sideEffect === "write" && req.confirmed !== true) {
     return { allow: false, reason: "write / real-world action requires confirmation", needsApproval: true };
   }
   if (state.spentCents + req.cents > cfg.globalCapCents) {

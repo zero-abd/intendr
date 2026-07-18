@@ -1,12 +1,15 @@
 import { createBudgetPolicy } from "@intendr/budget";
+import { createCardIssuer, resolveGeoFromCf, type CardIssuerEnv, type Geo } from "@intendr/commerce";
 import type { Cents, FetchLike, PaymentRail, WorkspaceId } from "@intendr/contracts";
 import { buildTools, type McpDeps, type ToolDef } from "@intendr/mcp";
-import { DoorDashProvider, OrthogonalProvider, ProviderRegistry, UberProvider } from "@intendr/providers";
+import { AmazonProvider, DoorDashProvider, OrthogonalProvider, ProviderRegistry, UberProvider } from "@intendr/providers";
 
-interface McpEnv {
+interface McpEnv extends CardIssuerEnv {
   ORTHOGONAL_API_KEY?: string;
   SUPABASE_URL?: string;
   SUPABASE_SERVICE_KEY?: string;
+  /** Base URL of the amazon-agent service. Unset → the built-in deterministic mock. */
+  AMAZON_AGENT_URL?: string;
 }
 
 const SUPPORTED_PROTOCOL = "2024-11-05";
@@ -30,12 +33,13 @@ const TOOL_SCHEMAS: Record<string, { description: string; inputSchema: Record<st
     inputSchema: { type: "object", properties: { id: { type: "string", description: ID_HINT, examples: ["uber:ride"] } }, required: ["id"] },
   },
   pay_and_run: {
-    description: "Pay for and execute a capability, debiting your wallet balance. Put each param in the bucket get_service says: query, body, or path. Returns 'ok' with data, or 'BLOCKED' (write/insufficient balance). Example: orthogonal:company-enrich::GET::/companies/enrich with query:{domain:'stripe.com'}.",
+    description: "Pay for and execute a capability, debiting your wallet balance. Put each param in the bucket get_service says: query, body, or path. Real-world writes (e.g. 'amazon:buy') return BLOCKED + needsApproval with a live preview; re-call with confirm:true ONLY after the user approves to actually purchase. Example: orthogonal:company-enrich::GET::/companies/enrich with query:{domain:'stripe.com'}.",
     inputSchema: {
       type: "object",
       properties: {
         id: { type: "string", description: ID_HINT },
         query: { type: "object" }, body: { type: "object" }, path: { type: "object" },
+        confirm: { type: "boolean", description: "Set true ONLY after explicit user approval to execute a real-world write (e.g. a purchase)." },
       },
       required: ["id"],
     },
@@ -107,13 +111,15 @@ async function resolveUid(env: McpEnv, request: Request): Promise<string> {
   return DEMO_USER_ID;
 }
 
-async function buildDeps(env: McpEnv, store: SupabaseSpendStore): Promise<McpDeps> {
+async function buildDeps(env: McpEnv, store: SupabaseSpendStore, geo?: Geo): Promise<McpDeps> {
   const balance = await store.balance();
   const platformFetch: FetchLike = (url, init) => globalThis.fetch(url, init);
+  const issuer = createCardIssuer(env, platformFetch); // default: mock test card (no real money)
   const registry = new ProviderRegistry()
     .register(new OrthogonalProvider({ apiKey: env.ORTHOGONAL_API_KEY ?? "", fetch: platformFetch }))
     .register(new UberProvider())
-    .register(new DoorDashProvider());
+    .register(new DoorDashProvider())
+    .register(new AmazonProvider({ fetch: platformFetch, baseUrl: env.AMAZON_AGENT_URL, issuer, geo }));
   const budget = createBudgetPolicy({ store, settings: { sessionCapCents: balance, monthlyCapCents: 100000, perCallWarnCents: 200 } });
   return {
     workspaceId: "user" as WorkspaceId,
@@ -126,7 +132,8 @@ async function buildDeps(env: McpEnv, store: SupabaseSpendStore): Promise<McpDep
 }
 
 function shapeArgs(name: string, args: Record<string, unknown>): Record<string, unknown> {
-  if (name === "pay_and_run") return { id: args.id, input: { body: args.body, query: args.query, path: args.path } };
+  if (name === "pay_and_run")
+    return { id: args.id, input: { body: args.body, query: args.query, path: args.path, confirm: args.confirm } };
   return args;
 }
 
@@ -134,7 +141,7 @@ type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean
 const errorResult = (text: string): ToolResult => ({ content: [{ type: "text", text }], isError: true });
 const okResult = (value: unknown): ToolResult => ({ content: [{ type: "text", text: JSON.stringify(value, null, 2) }] });
 
-async function callTool(env: McpEnv, uid: string, name: string, args: Record<string, unknown>): Promise<ToolResult> {
+async function callTool(env: McpEnv, uid: string, name: string, args: Record<string, unknown>, geo?: Geo): Promise<ToolResult> {
   if (!TOOL_SCHEMAS[name]) return errorResult(`unknown tool: ${name}`);
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return errorResult("wallet backend not configured");
   const missing = (REQUIRED_ARGS[name] ?? []).filter((k) => args[k] === undefined || args[k] === null || args[k] === "");
@@ -142,7 +149,7 @@ async function callTool(env: McpEnv, uid: string, name: string, args: Record<str
 
   const store = new SupabaseSpendStore(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY, uid);
   if (name === "pay_and_run") store.pendingService = String(args.id);
-  const deps = await buildDeps(env, store);
+  const deps = await buildDeps(env, store, geo);
   const tool = new Map<string, ToolDef>(buildTools(deps).map((t) => [t.spec.name, t] as const)).get(name);
   if (!tool) return errorResult(`unknown tool: ${name}`);
 
@@ -159,6 +166,8 @@ export async function handleMcp(request: Request, env: McpEnv): Promise<Response
   }
 
   const uid = await resolveUid(env, request);
+  // Cloudflare attaches edge-resolved geo to request.cf — used for nearest-address.
+  const geo = resolveGeoFromCf((request as unknown as { cf?: unknown }).cf);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let body: any;
@@ -169,7 +178,7 @@ export async function handleMcp(request: Request, env: McpEnv): Promise<Response
   }
 
   if (body && typeof body === "object" && !Array.isArray(body) && typeof body.tool === "string") {
-    return json({ result: await callTool(env, uid, body.tool, (body.input as Record<string, unknown>) ?? {}) });
+    return json({ result: await callTool(env, uid, body.tool, (body.input as Record<string, unknown>) ?? {}, geo) });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -183,7 +192,7 @@ export async function handleMcp(request: Request, env: McpEnv): Promise<Response
       return rpcOk(id, { tools: Object.entries(TOOL_SCHEMAS).map(([name, s]) => ({ name, description: s.description, inputSchema: s.inputSchema })) });
     }
     if (method === "tools/call") {
-      return rpcOk(id, await callTool(env, uid, req?.params?.name, (req?.params?.arguments as Record<string, unknown>) ?? {}));
+      return rpcOk(id, await callTool(env, uid, req?.params?.name, (req?.params?.arguments as Record<string, unknown>) ?? {}, geo));
     }
     if (method === "ping") return rpcOk(id, {});
     if (typeof method === "string" && method.startsWith("notifications/")) return null;

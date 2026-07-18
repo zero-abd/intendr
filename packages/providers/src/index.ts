@@ -14,6 +14,8 @@ import type {
   SideEffectClass,
 } from "@intendr/contracts";
 
+export { AmazonProvider, type AmazonDeps } from "./amazon.js";
+
 let requestCounter = 0;
 const newRequestId = (): RequestId => `req_${++requestCounter}` as unknown as RequestId;
 

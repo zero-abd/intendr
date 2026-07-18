@@ -5,6 +5,8 @@ import { DataProvider } from "./hooks/DataProvider";
 import { AppShell } from "./components/AppShell";
 import { AuthPage } from "./pages/AuthPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { CardsPage } from "./pages/CardsPage";
+import { TransactionsPage } from "./pages/TransactionsPage";
 import { ActivityPage } from "./pages/ActivityPage";
 import { ProfilePage } from "./pages/ProfilePage";
 
@@ -22,6 +24,8 @@ function Shell() {
       <AppShell>
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/cards" element={<CardsPage />} />
+          <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

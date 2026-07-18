@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@intendr/budget": "workspace:*",
+    "@intendr/commerce": "workspace:*",
     "@intendr/contracts": "workspace:*",
     "@intendr/guardrails": "workspace:*",
     "@intendr/mcp": "workspace:*",
