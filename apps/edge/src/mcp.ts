@@ -13,8 +13,6 @@ interface McpEnv extends CardIssuerEnv {
 }
 
 const SUPPORTED_PROTOCOL = "2024-11-05";
-// Fallback identity until the connector's browser-login attaches a per-user token.
-const DEMO_USER_ID = "987083cf-4dde-4989-abcd-780a004bde65";
 
 const SERVER_INSTRUCTIONS =
   "Flow: search_services(query) -> get_service(id) to read price + params (query/body/path) -> " +
@@ -93,7 +91,8 @@ class SupabaseSpendStore implements PaymentRail {
   }
 }
 
-async function resolveUid(env: McpEnv, request: Request): Promise<string> {
+// Resolve the signed-in user from the connector's Bearer token. No token -> no wallet.
+async function resolveUid(env: McpEnv, request: Request): Promise<string | null> {
   const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (bearer && env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY) {
     try {
@@ -105,10 +104,10 @@ async function resolveUid(env: McpEnv, request: Request): Promise<string> {
         if (u?.id) return u.id;
       }
     } catch {
-      /* fall through to demo */
+      /* unauthenticated */
     }
   }
-  return DEMO_USER_ID;
+  return null;
 }
 
 async function buildDeps(env: McpEnv, store: SupabaseSpendStore, geo?: Geo): Promise<McpDeps> {
@@ -141,8 +140,9 @@ type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean
 const errorResult = (text: string): ToolResult => ({ content: [{ type: "text", text }], isError: true });
 const okResult = (value: unknown): ToolResult => ({ content: [{ type: "text", text: JSON.stringify(value, null, 2) }] });
 
-async function callTool(env: McpEnv, uid: string, name: string, args: Record<string, unknown>, geo?: Geo): Promise<ToolResult> {
+async function callTool(env: McpEnv, uid: string | null, name: string, args: Record<string, unknown>, geo?: Geo): Promise<ToolResult> {
   if (!TOOL_SCHEMAS[name]) return errorResult(`unknown tool: ${name}`);
+  if (!uid) return errorResult("authentication required — connect with the intendr connector (npx -y intendr) and sign in");
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return errorResult("wallet backend not configured");
   const missing = (REQUIRED_ARGS[name] ?? []).filter((k) => args[k] === undefined || args[k] === null || args[k] === "");
   if (missing.length > 0) return errorResult(`missing required argument(s): ${missing.join(", ")}`);
