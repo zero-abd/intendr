@@ -5,6 +5,8 @@ import { WalletDO } from "./wallet-do";
 
 export interface Env {
   ORTHOGONAL_API_KEY?: string;
+  SUPABASE_URL?: string;
+  SUPABASE_SERVICE_KEY?: string;
   WALLET_DO: DurableObjectNamespace;
 }
 
