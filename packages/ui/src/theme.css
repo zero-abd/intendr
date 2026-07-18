@@ -1,0 +1,513 @@
+/* intendr design system — "treasury cockpit"
+   Near-black canvas · Ramp-flavored acid-lime accent · monospace money · atmospheric depth.
+   Single source of truth for color, type, spacing, motion. Imported once by the app. */
+
+:root {
+  /* ── Surfaces (near-black, cool) ─────────────────────────── */
+  --bg: #08090b;
+  --bg-elev: #0e1013;
+  --panel: #131619;
+  --panel-2: #191d22;
+  --panel-hover: #1d2228;
+
+  /* ── Lines ───────────────────────────────────────────────── */
+  --hairline: rgba(255, 255, 255, 0.07);
+  --hairline-2: rgba(255, 255, 255, 0.11);
+  --hairline-strong: rgba(255, 255, 255, 0.18);
+
+  /* ── Ink ─────────────────────────────────────────────────── */
+  --ink: #f3f6f4;
+  --ink-muted: #9aa3a0;
+  --ink-faint: #5b6360;
+  --ink-ghost: #3a403d;
+
+  /* ── Atmosphere ──────────────────────────────────────────── */
+  --grid-line: rgba(255, 255, 255, 0.032);
+  --grid-size: 46px;
+
+  /* ── Accent (Ramp-ish acid lime) ─────────────────────────── */
+  --accent: #c6f24e;
+  --accent-hi: #d7ff5f;
+  --accent-dim: #9bc23a;
+  --accent-ink: #0a0d05;
+  --accent-glow: rgba(198, 242, 78, 0.28);
+  --accent-wash: rgba(198, 242, 78, 0.08);
+
+  /* ── Semantic ────────────────────────────────────────────── */
+  --good: #45e0a0;
+  --warn: #ffbb3c;
+  --danger: #ff5d63;
+  --danger-wash: rgba(255, 93, 99, 0.1);
+  --info: #7c93ff;
+
+  /* ── Radii ───────────────────────────────────────────────── */
+  --r-xs: 7px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* ── Shadow ──────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.55);
+  --shadow-glow: 0 0 0 1px rgba(198, 242, 78, 0.25), 0 12px 40px rgba(198, 242, 78, 0.12);
+
+  /* ── Type ────────────────────────────────────────────────── */
+  --font-ui: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-display: "Bricolage Grotesque", var(--font-ui);
+
+  /* ── Motion ──────────────────────────────────────────────── */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur: 0.32s;
+}
+
+/* ── Reset ─────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  font-feature-settings: "cv01", "ss01";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Atmosphere: a slow accent aurora + fine grain + a faint grid.
+   Purely decorative, sits behind everything, never intercepts clicks. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    /* faint grid — the "cockpit" gridlines */
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    /* accent aurora */
+    radial-gradient(60% 45% at 12% -5%, var(--accent-wash), transparent 60%),
+    radial-gradient(50% 40% at 100% 0%, rgba(124, 147, 255, 0.06), transparent 55%),
+    radial-gradient(80% 60% at 50% 120%, rgba(198, 242, 78, 0.05), transparent 60%);
+  background-size: var(--grid-size) var(--grid-size), var(--grid-size) var(--grid-size), 100% 100%, 100% 100%,
+    100% 100%;
+  /* fade the grid out toward the edges so it reads as texture, not a spreadsheet */
+  -webkit-mask-image: radial-gradient(130% 130% at 50% 40%, #000 55%, transparent 100%);
+  mask-image: radial-gradient(130% 130% at 50% 40%, #000 55%, transparent 100%);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  isolation: isolate;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Custom scrollbar for the cockpit feel */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--hairline-2);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--hairline-strong);
+  background-clip: content-box;
+}
+
+/* Tabular, slashed-zero numerals everywhere money lives */
+.mono,
+.tnum {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum", "zero";
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ── Shared keyframes ──────────────────────────────────────── */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--accent-glow);
+  }
+  50% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COMPONENT LAYER — reusable classes consumed by @intendr/ui React wrappers
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Panel / Card ──────────────────────────────────────────── */
+.ui-card {
+  position: relative;
+  background: linear-gradient(180deg, var(--panel), var(--bg-elev));
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+}
+.ui-card--pad {
+  padding: 22px;
+}
+.ui-card--glow {
+  border-color: rgba(198, 242, 78, 0.22);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+/* hairline highlight along the top edge — the "cockpit panel" seam */
+.ui-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--hairline-strong), transparent);
+  border-radius: inherit;
+}
+
+/* ── Eyebrow / label ───────────────────────────────────────── */
+.ui-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ── Button ────────────────────────────────────────────────── */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  height: 40px;
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition: transform var(--dur) var(--ease), background var(--dur) var(--ease),
+    border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+.ui-btn:active {
+  transform: translateY(1px) scale(0.99);
+}
+.ui-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ui-btn--primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 6px 20px -6px var(--accent-glow);
+}
+.ui-btn--primary:hover:not(:disabled) {
+  background: var(--accent-hi);
+  box-shadow: 0 10px 30px -6px var(--accent-glow);
+}
+.ui-btn--ghost {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--hairline-2);
+  color: var(--ink);
+}
+.ui-btn--ghost:hover:not(:disabled) {
+  background: var(--panel-hover);
+  border-color: var(--hairline-strong);
+}
+.ui-btn--quiet {
+  color: var(--ink-muted);
+  padding: 0 10px;
+}
+.ui-btn--quiet:hover:not(:disabled) {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.04);
+}
+.ui-btn--danger {
+  background: var(--danger-wash);
+  border-color: rgba(255, 93, 99, 0.3);
+  color: var(--danger);
+}
+.ui-btn--danger:hover:not(:disabled) {
+  background: rgba(255, 93, 99, 0.16);
+}
+.ui-btn--block {
+  width: 100%;
+}
+.ui-btn--sm {
+  height: 32px;
+  font-size: 13px;
+  padding: 0 12px;
+}
+
+/* ── Field ─────────────────────────────────────────────────── */
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.ui-field > label {
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--ink-muted);
+  letter-spacing: -0.005em;
+}
+.ui-input {
+  height: 44px;
+  padding: 0 14px;
+  background: var(--bg);
+  border: 1px solid var(--hairline-2);
+  border-radius: var(--r-sm);
+  color: var(--ink);
+  font-size: 14.5px;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.ui-input::placeholder {
+  color: var(--ink-ghost);
+}
+.ui-input:focus {
+  outline: none;
+  border-color: var(--accent-dim);
+  box-shadow: 0 0 0 3px var(--accent-wash);
+  background: var(--bg-elev);
+}
+.ui-input--money {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-size: 16px;
+}
+
+/* ── Badge / chip ──────────────────────────────────────────── */
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--r-pill);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--hairline-2);
+  color: var(--ink-muted);
+  background: rgba(255, 255, 255, 0.03);
+}
+.ui-badge--good {
+  color: var(--good);
+  border-color: rgba(69, 224, 160, 0.3);
+  background: rgba(69, 224, 160, 0.08);
+}
+.ui-badge--warn {
+  color: var(--warn);
+  border-color: rgba(255, 187, 60, 0.3);
+  background: rgba(255, 187, 60, 0.08);
+}
+.ui-badge--danger {
+  color: var(--danger);
+  border-color: rgba(255, 93, 99, 0.3);
+  background: var(--danger-wash);
+}
+.ui-badge--accent {
+  color: var(--accent);
+  border-color: rgba(198, 242, 78, 0.3);
+  background: var(--accent-wash);
+}
+.ui-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* ── Stat tile ─────────────────────────────────────────────── */
+.ui-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid var(--hairline);
+}
+.ui-stat__label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.ui-stat__value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-size: 21px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+/* ── Spend meter ───────────────────────────────────────────── */
+.ui-meter {
+  --meter: 0%;
+  --meter-color: var(--accent);
+  position: relative;
+  height: 12px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+}
+.ui-meter__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--meter);
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in oklab, var(--meter-color) 70%, black), var(--meter-color));
+  box-shadow: 0 0 16px -2px var(--meter-color);
+  transition: width 0.8s var(--ease), background 0.5s var(--ease), box-shadow 0.5s var(--ease);
+}
+/* animated hatch stripes gliding across the fill */
+.ui-meter__fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(0, 0, 0, 0.14) 0 8px,
+    transparent 8px 16px
+  );
+  animation: meter-glide 1.1s linear infinite;
+}
+@keyframes meter-glide {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 32px 0;
+  }
+}
+
+/* ── Avatar ────────────────────────────────────────────────── */
+.ui-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--accent-ink);
+  background: linear-gradient(140deg, var(--accent-hi), var(--accent-dim));
+  overflow: hidden;
+  flex: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+.ui-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Skeleton ──────────────────────────────────────────────── */
+.ui-skeleton {
+  border-radius: var(--r-sm);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s var(--ease-in-out) infinite;
+}
