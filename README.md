@@ -53,6 +53,8 @@ ORTHOGONAL_API_KEY=sk-... bun --cwd apps/mcp run start   # the MCP connector (st
 
 **MCP connector** (`apps/mcp`): a real stdio MCP server any agent can add (Claude Desktop/Code, Cursor, …). It exposes the **entire Orthogonal catalog** (discovered at runtime via `search_services` → `get_service` → `pay_and_run`) plus commerce providers (Uber, DoorDash) — all metered through the spend-capped wallet. See [`apps/mcp/README.md`](apps/mcp/README.md).
 
+**Commerce provider research** (`test/mcp-smoke`): findings from smoke-testing the `@striderlabs/*` commerce MCP servers (DoorDash, Uber, Amazon, …) that intendr's providers wrap — which reach their site vs. get bot-blocked, the login/session model, and how payment is inherited from the account default. Includes an implementation-ready **[Amazon MCP research spec](test/mcp-smoke/AMAZON-MCP-RESEARCH.md)** and a wired-up TypeScript **[starter skeleton](test/mcp-smoke/amazon-mcp-starter/)** (`index.ts`/`auth.ts` complete; `browser.ts` has `TODO(agent)` scrape stubs). Start at [`test/mcp-smoke/README.md`](test/mcp-smoke/README.md).
+
 Hosting is **hybrid**: `apps/edge` → Cloudflare Workers (MCP + API + Durable Objects); `apps/web` + `apps/landing` → Vercel. The ECC agent harness under `.claude/` is installed per-developer (see [SKILLS_SETUP.md](SKILLS_SETUP.md)) and is not committed.
 
 ## Agent tooling
