@@ -1,12 +1,16 @@
-// Shared design tokens + (later) React components: TraceBlock, CostMeter, ApprovalChip.
-// Kept dependency-free for now so it typechecks without React wired in; add components
-// under src/components/*.tsx and re-export them here.
+// @intendr/ui — the "treasury cockpit" design system.
+// Import the stylesheet once at the app root:  import "@intendr/ui/theme.css";
+// Then use tokens + components from here.
 
-export const TOKENS = {
-  accent: "#4F46E5",
-  ink: "#18181B",
-  muted: "#71717A",
-  hairline: "#ECECEB",
-} as const;
-
-export const UI_VERSION = "0.0.0";
+export { TOKENS, meterColor, UI_VERSION, type TokenName } from "./tokens";
+export {
+  Card,
+  Eyebrow,
+  Button,
+  Field,
+  Badge,
+  StatTile,
+  Avatar,
+  Skeleton,
+} from "./components/primitives";
+export { SpendMeter } from "./components/SpendMeter";
