@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local data (wallet ledger, sqlite)
+*.sqlite
+*.sqlite3
+data/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# ECC agent harness — installed per-developer via SKILLS_SETUP.md, never committed
+.claude/
