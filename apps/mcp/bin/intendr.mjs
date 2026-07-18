@@ -1,9 +1,12 @@
 #!/usr/bin/env node
-// intendr — MCP connector (stdio). Thin proxy to the hosted intendr service, which holds the
-// Orthogonal key server-side and gives each signed-in user their own spend-capped wallet.
+// intendr — MCP connector (stdio) for the hosted intendr service, which holds the Orthogonal
+// key server-side and gives each signed-in user their own spend-capped wallet.
 //
-// On first run it opens a browser to sign in / sign up (Supabase); the token is cached at
-// ~/.intendr/auth.json and refreshed silently. Add it with:  claude mcp add intendr -- npx -y intendr
+// Auth is a browser device-code flow: on first run it opens a branded sign-in page carrying a
+// one-shot code and polls the Worker until the browser hands back a session (nothing listens on
+// a local port). The token is cached at ~/.intendr/auth.json and refreshed silently. Every tool
+// call proxies to the service over HTTPS with a Bearer token. Set INTENDR_URL to point at a
+// different backend. Add it with:  claude mcp add intendr -- npx -y intendr
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -52,7 +55,7 @@ async function browserLogin() {
     await sleep(LOGIN_POLL_MS);
     try {
       const res = await fetch(`${BASE}/auth/poll?code=${encodeURIComponent(code)}`, {
-        headers: { "user-agent": "intendr-connector/0.3" },
+        headers: { "user-agent": "intendr-connector/0.4" },
       });
       if (!res.ok) continue;
       const d = await res.json();
@@ -111,7 +114,7 @@ async function callRemote(tool, input, retry = true) {
   const token = await ensureToken();
   const res = await fetch(`${BASE}/mcp`, {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${token}`, "user-agent": "intendr-connector/0.3" },
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}`, "user-agent": "intendr-connector/0.4" },
     body: JSON.stringify({ tool, input }),
   });
   if (res.status === 401 && retry) {
@@ -123,10 +126,7 @@ async function callRemote(tool, input, retry = true) {
   return data.result ?? { content: [{ type: "text", text: JSON.stringify(data) }] };
 }
 
-// Sign in up front so the wallet is ready before the first tool call.
-await ensureToken().catch((e) => log("auth error:", e?.message ?? e));
-
-const server = new McpServer({ name: "intendr", version: "0.3.0" });
+const server = new McpServer({ name: "intendr", version: "0.4.0" });
 
 server.tool("get_wallet", "Your wallet balance and remaining budget.", {}, () => callRemote("get_wallet", {}));
 server.tool(
@@ -161,5 +161,10 @@ server.tool(
   (args) => callRemote("approve", args),
 );
 
+// Connect stdio FIRST so the MCP `initialize` handshake is answered immediately — the client
+// must never wait on browser sign-in. Auth is lazy: it runs on the first tool call (via
+// callRemote -> ensureToken). We also kick off a non-blocking warm-up so the wallet is usually
+// ready by the time a tool is called, but a slow/pending sign-in can never stall the transport.
 await server.connect(new StdioServerTransport());
 log(`connector ready -> ${BASE}`);
+ensureToken().catch((e) => log("auth pending:", e?.message ?? e));

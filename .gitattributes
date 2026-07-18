@@ -1,0 +1,13 @@
+# Force LF on all JS/TS module files so executable bin shebangs never get a
+# stray carriage return on Windows checkouts (core.autocrlf=true would otherwise
+# rewrite `#!/usr/bin/env node` -> `#!/usr/bin/env node\r`, which breaks npx bin
+# resolution: "npm error could not determine executable to run").
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.js  text eol=lf
+*.ts  text eol=lf
+*.json text eol=lf
+
+# The npx connector bin MUST be LF — its shebang is parsed by npm/npx to pick the
+# interpreter; a CRLF here yields the unresolvable interpreter `node\r`.
+apps/mcp/bin/intendr.mjs text eol=lf
