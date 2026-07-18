@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Badge, Button, Card, Eyebrow, Skeleton, SpendMeter, StatTile } from "@intendr/ui";
 import { useData } from "../hooks/DataProvider";
 import { addFunds, updateCaps } from "../api/wallet";
 import { totalSpent } from "../api/transactions";
-import { fmtCents, dollarsToCents, centsToDollarInput, relativeTime } from "../lib/format";
+import { listFundingCards } from "../api/cards";
+import { fmtCents, dollarsToCents, centsToDollarInput, formatService, relativeTime } from "../lib/format";
 import { useAuth } from "../auth/AuthProvider";
+import type { FundingCard } from "../api/types";
 
 const QUICK = [1000, 2500, 5000, 10000]; // cents
 
@@ -63,6 +65,11 @@ export function DashboardPage() {
         />
       </div>
 
+      {/* Payment card summary — full detail lives on /cards */}
+      <div style={{ animation: "rise 0.5s var(--ease) 0.15s both" }}>
+        <PaymentCardCard userId={user!.id} />
+      </div>
+
       {/* Recent activity preview */}
       <Card style={{ animation: "rise 0.5s var(--ease) 0.18s both" }}>
         <div className="rowhead">
@@ -81,7 +88,7 @@ export function DashboardPage() {
               <li key={t.id} className="tx">
                 <div className="tx__dot" data-status={t.status} />
                 <div className="tx__main">
-                  <span className="tx__service">{t.service}</span>
+                  <span className="tx__service" title={t.service}>{formatService(t.service)}</span>
                   <span className="tx__time">{relativeTime(t.created_at)}</span>
                 </div>
                 <span className="tx__amt mono">{fmtCents(t.cents)}</span>
@@ -91,6 +98,78 @@ export function DashboardPage() {
         )}
       </Card>
     </div>
+  );
+}
+
+/* ── Payment card summary ──────────────────────────────────── */
+function PaymentCardCard({ userId }: { userId: string }) {
+  const navigate = useNavigate();
+  const [card, setCard] = useState<FundingCard | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    listFundingCards(userId)
+      .then((cards) => {
+        if (!alive) return;
+        // Prefer the default card, else the most recent.
+        setCard(cards.find((c) => c.is_default) ?? cards[0] ?? null);
+      })
+      .catch(() => alive && setCard(null)) // tables may not be migrated yet — just show the add prompt
+      .finally(() => alive && setLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
+
+  const exp = card ? `${String(card.exp_month).padStart(2, "0")}/${String(card.exp_year).slice(-2)}` : "";
+
+  return (
+    <Card>
+      <div className="rowhead">
+        <div>
+          <Eyebrow>Payment card</Eyebrow>
+          <p className="muted" style={{ marginTop: 6, fontSize: 13 }}>
+            The real-world card your wallet tops up from. We store brand + last 4 only.
+          </p>
+        </div>
+        <Link to="/cards" className="link-quiet">
+          Manage →
+        </Link>
+      </div>
+
+      {loading ? (
+        <div className="fundrow" style={{ marginTop: 16 }}>
+          <Skeleton w={54} h={34} />
+          <div className="fundrow__main">
+            <Skeleton w={120} h={14} />
+            <Skeleton w={160} h={11} style={{ marginTop: 8 }} />
+          </div>
+        </div>
+      ) : card ? (
+        <div className="fundrow" style={{ marginTop: 16 }}>
+          <div className={`fundrow__brand fundrow__brand--${card.brand}`}>{card.brand.toUpperCase()}</div>
+          <div className="fundrow__main">
+            <span className="mono">•••• {card.last4}</span>
+            <span className="tx__time">
+              {card.holder_name ?? "Cardholder"} · exp {exp}
+            </span>
+          </div>
+          {card.is_default && <Badge tone="accent">Default</Badge>}
+        </div>
+      ) : (
+        <div
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 16 }}
+        >
+          <p className="muted" style={{ fontSize: 13 }}>
+            No payment card linked yet.
+          </p>
+          <Button sm variant="ghost" onClick={() => navigate("/cards")}>
+            + Add card
+          </Button>
+        </div>
+      )}
+    </Card>
   );
 }
 

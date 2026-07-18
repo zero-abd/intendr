@@ -1,5 +1,5 @@
 {
-  "name": "@intendr/providers",
+  "name": "@intendr/commerce",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@intendr/commerce": "workspace:*",
-    "@intendr/contracts": "workspace:*",
-    "zod": "^3.23.8"
+    "@intendr/contracts": "workspace:*"
   }
 }

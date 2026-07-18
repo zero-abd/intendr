@@ -69,6 +69,12 @@ export interface CapabilityProvider {
   search(query: string): Promise<ServiceRef[]>;
   details(id: string): Promise<ServiceDetails>;
   run(id: string, input: Record<string, unknown>, idemKey: IdempotencyKey): Promise<RunResult>;
+  /**
+   * Optional: a no-charge, no-side-effect preview of a write capability (e.g. a
+   * cart total before checkout). When present, pay_and_run surfaces it alongside
+   * a BLOCKED/needsApproval verdict so the user can approve with full context.
+   */
+  preview?(id: string, input: Record<string, unknown>): Promise<unknown>;
 }
 
 export interface ToolSpec {
