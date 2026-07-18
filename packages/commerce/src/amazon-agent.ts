@@ -89,8 +89,10 @@ function parseBudgetCents(q: string): number | undefined {
 }
 
 /** Score catalog by keyword overlap; respect a "under $X" budget when present. */
-function rankProducts(query: string): AmazonProduct[] {
-  const q = query.toLowerCase();
+function rankProducts(query: unknown): AmazonProduct[] {
+  // Coerce defensively: an LLM may hand us a non-string (e.g. {query:"…"} in the
+  // wrong param bucket). Never let that throw a raw TypeError out of pay_and_run.
+  const q = (typeof query === "string" ? query : query == null ? "" : String(query)).toLowerCase();
   const budget = parseBudgetCents(q);
   const words = q.split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !STOP.has(w) && !/^\d+$/.test(w));
   const pool = budget ? MOCK_CATALOG.filter((p) => p.priceCents <= budget) : MOCK_CATALOG;
