@@ -1,0 +1,169 @@
+---
+// "Guardrails that visibly work" — the budget engine + approval gate, with a live
+// BLOCK → raise_cap sequence lifted from the product's demo.
+const rails = [
+  {
+    title: "Reserve → settle budgeting",
+    body: "Every paid action holds its estimated cost against the cap first, then settles the real cost and releases the rest. No double-charges, no silent overspend.",
+  },
+  {
+    title: "Approval gate",
+    body: "Anything expensive or real-world pauses and asks. The agent surfaces a no-charge preview — the cart total — so you approve with full context.",
+  },
+  {
+    title: "Per-session + monthly caps",
+    body: "A default $45 session cap and a monthly ceiling bound every wallet. The agent can see what's left and route to the cheapest option.",
+  },
+];
+---
+
+<section id="guardrails" aria-labelledby="guardrails-title">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Guardrails</p>
+      <h2 id="guardrails-title">Guardrails that visibly work</h2>
+      <p>
+        The point isn't trust — it's that the agent gets stopped, live, on screen. Every real-world
+        purchase needs cap-OK <b>+</b> approval <b>+</b> confirm.
+      </p>
+    </div>
+
+    <div class="rail-layout">
+      <ul class="rail-list">
+        {
+          rails.map((r) => (
+            <li class="card rail">
+              <h3>{r.title}</h3>
+              <p>{r.body}</p>
+            </li>
+          ))
+        }
+      </ul>
+
+      <div class="card block-demo" aria-labelledby="block-title">
+        <div class="block-head">
+          <span class="block-tag">Live block</span>
+          <h3 id="block-title">The cap holds — then you lift it</h3>
+        </div>
+        <div class="block-body mono">
+          <div class="block-row">
+            <span class="dim">running total</span><span>$0.03 + $18.50</span>
+          </div>
+          <div class="block-row">
+            <span class="dim">next: Uber SFO → downtown</span><span>$28.00</span>
+          </div>
+          <div class="block-flag">
+            <span class="x">BLOCKED</span>
+            <span>$46.53 &gt; $45.00 session cap — charged nothing</span>
+          </div>
+          <div class="block-row raise">
+            <span class="you">you</span><span>raise the cap to $60</span>
+          </div>
+          <div class="block-row">
+            <span class="tool">approve</span><span class="ok">raise_cap → ride books ✓</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .rail-layout {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  @media (min-width: 900px) {
+    .rail-layout {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .rail-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .rail {
+    padding: 20px 22px;
+  }
+  .rail h3 {
+    font-size: 18px;
+  }
+  .rail p {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+  .block-demo {
+    padding: 24px;
+    position: sticky;
+    top: 82px;
+  }
+  .block-tag {
+    display: inline-block;
+    font-family: "Geist Mono", monospace;
+    font-size: 11.5px;
+    color: var(--danger);
+    background: rgba(255, 93, 99, 0.1);
+    border: 1px solid rgba(255, 93, 99, 0.28);
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+  .block-head h3 {
+    font-size: 20px;
+    margin-top: 12px;
+  }
+  .block-body {
+    margin-top: 18px;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .block-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+  }
+  .block-row .dim {
+    color: var(--faint);
+  }
+  .block-flag {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 93, 99, 0.3);
+    background: rgba(255, 93, 99, 0.06);
+    border-radius: 10px;
+    color: var(--muted);
+  }
+  .block-flag .x {
+    color: var(--danger);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+  .raise {
+    margin-top: 4px;
+  }
+  .you {
+    color: var(--accentInk);
+    background: var(--accent);
+    padding: 1px 7px;
+    border-radius: 5px;
+    font-size: 11px;
+  }
+  .tool {
+    color: var(--accent);
+  }
+  .ok {
+    color: var(--accent);
+  }
+</style>

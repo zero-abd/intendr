@@ -1,0 +1,104 @@
+---
+import CopyChip from "./CopyChip.astro";
+const dash = "https://app.intendr.app";
+---
+
+<section class="hero" aria-labelledby="hero-title">
+  <div class="wrap">
+    <p class="eyebrow">One MCP URL · welcome credit on signup</p>
+    <h1 id="hero-title" class="hero-title">
+      A <span class="accent">spend-capped wallet</span> any AI agent can pay with.
+    </h1>
+    <p class="hero-sub">
+      Point any chatbot at one MCP URL and your agent gets money with a cap — it can pay for real
+      data APIs and real-world commerce, and it stops itself before it overspends.
+    </p>
+
+    <div class="hero-cta">
+      <a class="btn btn-primary" href={dash}>Open the dashboard</a>
+      <a class="btn btn-ghost" href="#connect">Connect in 30 seconds</a>
+    </div>
+
+    <div class="hero-chip">
+      <CopyChip command="claude mcp add intendr -- npx -y intendr" />
+    </div>
+
+    <dl class="hero-stats" aria-label="At a glance">
+      <div>
+        <dt>$50</dt>
+        <dd>welcome credit, per user</dd>
+      </div>
+      <div>
+        <dt>$45</dt>
+        <dd>default session cap</dd>
+      </div>
+      <div>
+        <dt>6</dt>
+        <dd>MCP tools, no API key</dd>
+      </div>
+      <div>
+        <dt>0</dt>
+        <dd>cards you ever hand over</dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<style>
+  .hero {
+    padding-top: clamp(52px, 8vw, 96px);
+    padding-bottom: clamp(40px, 6vw, 72px);
+  }
+  .hero-title {
+    font-size: clamp(38px, 7vw, 68px);
+    max-width: 15ch;
+  }
+  .hero-sub {
+    margin-top: 22px;
+    max-width: 60ch;
+    color: var(--muted);
+    font-size: clamp(16px, 2vw, 19px);
+  }
+  .hero-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .hero-chip {
+    margin-top: 20px;
+    max-width: 480px;
+  }
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px 16px;
+    margin: 48px 0 0;
+    padding-top: 32px;
+    border-top: 1px solid var(--hair);
+    max-width: 720px;
+  }
+  .hero-stats div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .hero-stats dt {
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-weight: 700;
+    font-size: clamp(26px, 4vw, 34px);
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .hero-stats dd {
+    margin: 0;
+    color: var(--faint);
+    font-size: 13px;
+    line-height: 1.35;
+  }
+  @media (min-width: 720px) {
+    .hero-stats {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+</style>

@@ -1,0 +1,206 @@
+---
+// "Two things your chatbot can't do alone" — the product's two hero demos,
+// shown as annotated agent transcripts.
+---
+
+<section id="demos" aria-labelledby="demos-title">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">What it does</p>
+      <h2 id="demos-title">Two things your chatbot can't do alone</h2>
+      <p>
+        A regular chatbot can't reach a paid data API or check out a real cart. With intendr, your
+        agent pays for exactly what it needs — and never more than the cap.
+      </p>
+    </div>
+
+    <div class="demo-grid">
+      <!-- Demo 1: LinkedIn → verified email -->
+      <article class="card demo">
+        <div class="demo-top">
+          <span class="demo-badge">Real data · $0.01</span>
+          <h3>Fetch a real email from a LinkedIn URL</h3>
+          <p class="demo-lede">
+            A specific person Claude has no way to know. intendr pays a data provider one cent and
+            returns the verified address.
+          </p>
+        </div>
+        <div class="term" role="img" aria-label="Agent resolves a LinkedIn URL to a verified email for one cent">
+          <div class="term-line">
+            <span class="you">you</span>
+            <span>find the email behind linkedin.com/in/aaron-…</span>
+          </div>
+          <div class="term-line">
+            <span class="tool">search_services</span>
+            <span class="dim">→ Orthogonal · email verification</span>
+          </div>
+          <div class="term-line">
+            <span class="tool">pay_and_run</span>
+            <span class="dim">reserve $0.01 → run → settle</span>
+          </div>
+          <div class="term-out">
+            <div class="kv"><span>email</span><b class="accent">aaron@substantial.com</b></div>
+            <div class="kv"><span>status</span><b>verified</b></div>
+            <div class="kv"><span>charged</span><b>$0.01 · balance $49.99</b></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Demo 2: budget-aware purchase -->
+      <article class="card demo">
+        <div class="demo-top">
+          <span class="demo-badge">Real commerce · scoped card</span>
+          <h3>Buy the best product under a budget</h3>
+          <p class="demo-lede">
+            The agent finds the best match under your ceiling, previews the cart with tax, waits for
+            your yes, then checks out on a single-use virtual card.
+          </p>
+        </div>
+        <div class="term" role="img" aria-label="Agent buys the best weight scale under thirty dollars after approval">
+          <div class="term-line">
+            <span class="you">you</span>
+            <span>buy me the best weight scale under $30</span>
+          </div>
+          <div class="term-line">
+            <span class="tool">search_services</span>
+            <span class="dim">→ INEVIFIT Digital Scale · $18.99</span>
+          </div>
+          <div class="term-line">
+            <span class="tool">pay_and_run</span>
+            <span class="warn">BLOCKED · needs approval</span>
+          </div>
+          <div class="term-out">
+            <div class="kv"><span>cart</span><b>INEVIFIT scale + tax</b></div>
+            <div class="kv"><span>total</span><b class="accent">$20.65</b></div>
+            <div class="kv"><span>waiting</span><b>your approval to place</b></div>
+          </div>
+          <div class="term-line approve-line">
+            <span class="you">you</span>
+            <span>approved</span>
+            <span class="tool">approve</span>
+            <span class="ok">→ order placed · single-use card</span>
+          </div>
+        </div>
+        <p class="demo-note">
+          Safe default: purchases run on a test card — no real money — until the operator enables
+          real virtual cards.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<style>
+  .demo-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 900px) {
+    .demo-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .demo {
+    display: flex;
+    flex-direction: column;
+    padding: 26px;
+  }
+  .demo-badge {
+    display: inline-block;
+    font-family: "Geist Mono", monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.03em;
+    color: var(--accent);
+    background: rgba(198, 242, 78, 0.08);
+    border: 1px solid rgba(198, 242, 78, 0.22);
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+  .demo h3 {
+    font-size: clamp(20px, 2.6vw, 25px);
+    margin-top: 14px;
+  }
+  .demo-lede {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+  .term {
+    margin-top: 20px;
+    background: #0a0c0f;
+    border: 1px solid var(--hair);
+    border-radius: 12px;
+    padding: 16px;
+    font-family: "Geist Mono", monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    flex: 1 1 auto;
+  }
+  .term-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    color: var(--ink);
+  }
+  .term-line .you {
+    color: var(--accentInk);
+    background: var(--accent);
+    padding: 1px 7px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .term-line .tool {
+    color: var(--accent);
+  }
+  .dim {
+    color: var(--faint);
+  }
+  .warn {
+    color: var(--danger);
+    font-weight: 500;
+  }
+  .ok {
+    color: var(--accent);
+  }
+  .term-out {
+    margin-top: 2px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--hair);
+    border-radius: 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .kv {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .kv span {
+    color: var(--faint);
+  }
+  .kv b {
+    font-weight: 500;
+    color: var(--ink);
+    text-align: right;
+  }
+  .approve-line {
+    margin-top: auto;
+    padding-top: 4px;
+  }
+  .demo-note {
+    margin-top: 16px;
+    padding: 11px 14px;
+    border: 1px dashed var(--hair);
+    border-radius: 9px;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+</style>

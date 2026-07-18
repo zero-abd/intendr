@@ -1,0 +1,36 @@
+---
+// The intendr wordmark: a lime rounded-square dot + "intendr", matching login.ts.
+interface Props {
+  size?: number;
+}
+const { size = 20 } = Astro.props;
+const dot = Math.round(size * 1.1);
+---
+
+<span class="wordmark" style={`--dot:${dot}px;--wm:${size}px`}>
+  <span class="wm-dot" aria-hidden="true"></span>
+  <span class="wm-name">intendr</span>
+</span>
+
+<style>
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .wm-dot {
+    width: var(--dot);
+    height: var(--dot);
+    border-radius: 6px;
+    background: var(--accent);
+    box-shadow: 0 0 18px rgba(198, 242, 78, 0.5);
+    flex: 0 0 auto;
+  }
+  .wm-name {
+    font-family: "Bricolage Grotesque", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: var(--wm);
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+</style>
