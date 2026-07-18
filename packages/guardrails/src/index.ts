@@ -12,9 +12,18 @@ export interface GuardrailState {
   spentByCategoryCents: Record<string, Cents>;
 }
 
-export type GuardrailVerdict =
-  | { allow: true }
-  | { allow: false; reason: string; needsApproval: boolean };
+// A single shape (rather than a discriminated union) so consumers can read
+// `reason` / `needsApproval` without control-flow narrowing — some CI type-checkers
+// (e.g. Vercel's post-build tsc) run without strictNullChecks, where narrowing a
+// `{ allow: true } | { allow: false; ... }` union on `!verdict.allow` is skipped and
+// the branch-specific fields appear missing. Both are present iff `allow` is false.
+export interface GuardrailVerdict {
+  allow: boolean;
+  /** Why the action was blocked. Present when `allow` is false. */
+  reason?: string;
+  /** True when confirming / raising a cap can unblock. Present when `allow` is false. */
+  needsApproval?: boolean;
+}
 
 export interface GuardrailRequest {
   provider: string;
