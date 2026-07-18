@@ -511,3 +511,186 @@ select {
   background-size: 200% 100%;
   animation: shimmer 1.4s var(--ease-in-out) infinite;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   CREDIT CARD — virtual card face
+   ═══════════════════════════════════════════════════════════ */
+.cc {
+  --cc-a: var(--accent);
+  --cc-b: #0f1712;
+  position: relative;
+  aspect-ratio: 1.586;
+  width: 100%;
+  max-width: 360px;
+  padding: 20px;
+  border-radius: 18px;
+  color: #f4fff0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: linear-gradient(150deg, color-mix(in oklab, var(--cc-a) 42%, #0a0d08), var(--cc-b) 78%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.cc--compact {
+  max-width: 300px;
+  padding: 16px;
+}
+.cc--lime {
+  --cc-a: #c6f24e;
+}
+.cc--violet {
+  --cc-a: #a78bfa;
+}
+.cc--amber {
+  --cc-a: #ffbb3c;
+}
+.cc--slate {
+  --cc-a: #64748b;
+}
+.cc--frozen {
+  filter: saturate(0.5) brightness(0.85);
+}
+.cc--frozen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(160, 210, 255, 0.16), transparent 60%);
+  pointer-events: none;
+}
+.cc--closed {
+  filter: grayscale(0.85) brightness(0.6);
+}
+.cc__sheen {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 80% at 90% -10%, rgba(255, 255, 255, 0.18), transparent 55%);
+  pointer-events: none;
+}
+.cc__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+.cc__nick {
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+.cc__flag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(160, 210, 255, 0.2);
+  color: #cfe8ff;
+}
+.cc__flag--closed {
+  background: rgba(255, 255, 255, 0.12);
+  color: #d9dcd7;
+}
+.cc__chip {
+  width: 42px;
+  height: 30px;
+  margin-top: 14px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #e9d9a3, #b99b52);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 5px;
+  position: relative;
+}
+.cc__chip-line {
+  height: 2px;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 2px;
+}
+.cc__num {
+  display: flex;
+  gap: 12px;
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  margin-top: auto;
+  padding: 10px 0 4px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+.cc--compact .cc__num {
+  font-size: 15px;
+  gap: 9px;
+}
+.cc__last4 {
+  letter-spacing: 0.12em;
+}
+.cc__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.cc__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cc__label {
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  opacity: 0.7;
+  text-transform: uppercase;
+}
+.cc__exp {
+  font-size: 12px;
+  opacity: 0.92;
+}
+.cc__brand-visa {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.cc__brand-amex {
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  opacity: 0.92;
+}
+.cc__brand-mc {
+  position: relative;
+  width: 40px;
+  height: 24px;
+}
+.cc__mc-dot {
+  position: absolute;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+.cc__mc-dot--a {
+  left: 0;
+  background: #eb001b;
+}
+.cc__mc-dot--b {
+  right: 0;
+  background: #f79e1b;
+  mix-blend-mode: hard-light;
+}
+.cc__usage {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.3);
+}
+.cc__usage-fill {
+  height: 100%;
+  width: var(--usage, 0%);
+  background: #f4fff0;
+  opacity: 0.85;
+  transition: width 0.6s var(--ease);
+}
