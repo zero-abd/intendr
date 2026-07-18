@@ -7,7 +7,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { createServer } from "node:http";
+import { randomUUID } from "node:crypto";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -35,37 +35,40 @@ function openBrowser(url) {
   exec(cmd, () => {});
 }
 
-function browserLogin() {
-  return new Promise((resolve, reject) => {
-    const server = createServer((req, res) => {
-      const u = new URL(req.url, "http://127.0.0.1");
-      if (u.pathname !== "/callback") {
-        res.writeHead(404);
-        res.end();
-        return;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const LOGIN_POLL_MS = 2000;
+const LOGIN_TIMEOUT_MS = 300000;
+
+// Device-code login (no localhost): open the branded page with a one-shot code, then poll the
+// Worker until the browser hands the session back. Nothing listens on a local port.
+async function browserLogin() {
+  const code = randomUUID();
+  const url = `${BASE}/login?code=${encodeURIComponent(code)}`;
+  log("Sign in to connect your wallet:", url);
+  openBrowser(url);
+
+  const deadline = Date.now() + LOGIN_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    await sleep(LOGIN_POLL_MS);
+    try {
+      const res = await fetch(`${BASE}/auth/poll?code=${encodeURIComponent(code)}`, {
+        headers: { "user-agent": "intendr-connector/0.3" },
+      });
+      if (!res.ok) continue;
+      const d = await res.json();
+      if (d.status === "complete" && d.session?.access_token) {
+        const s = d.session;
+        return {
+          access_token: s.access_token,
+          refresh_token: s.refresh_token,
+          expires_at: Date.now() + (Number(s.expires_in) || 3600) * 1000,
+        };
       }
-      const access_token = u.searchParams.get("access_token");
-      const refresh_token = u.searchParams.get("refresh_token");
-      const expires_in = Number(u.searchParams.get("expires_in") || 3600);
-      res.writeHead(200, { "content-type": "text/html" });
-      res.end(
-        '<html><body style="font-family:system-ui;background:#08090b;color:#e7e7ea;text-align:center;padding:4rem"><h2>intendr connected ✓</h2><p>You can close this tab and return to your agent.</p></body></html>',
-      );
-      server.close();
-      if (access_token) resolve({ access_token, refresh_token, expires_at: Date.now() + expires_in * 1000 });
-      else reject(new Error("no token in callback"));
-    });
-    server.listen(0, "127.0.0.1", () => {
-      const { port } = server.address();
-      const url = `${BASE}/login?port=${port}`;
-      log("Sign in to connect your wallet:", url);
-      openBrowser(url);
-    });
-    setTimeout(() => {
-      server.close();
-      reject(new Error("login timed out — run again and complete sign-in in the browser"));
-    }, 300000);
-  });
+    } catch {
+      /* transient network error — keep polling */
+    }
+  }
+  throw new Error("login timed out — run again and complete sign-in in the browser");
 }
 
 async function refresh(auth) {
@@ -108,7 +111,7 @@ async function callRemote(tool, input, retry = true) {
   const token = await ensureToken();
   const res = await fetch(`${BASE}/mcp`, {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${token}`, "user-agent": "intendr-connector/0.2" },
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}`, "user-agent": "intendr-connector/0.3" },
     body: JSON.stringify({ tool, input }),
   });
   if (res.status === 401 && retry) {
@@ -123,7 +126,7 @@ async function callRemote(tool, input, retry = true) {
 // Sign in up front so the wallet is ready before the first tool call.
 await ensureToken().catch((e) => log("auth error:", e?.message ?? e));
 
-const server = new McpServer({ name: "intendr", version: "0.2.0" });
+const server = new McpServer({ name: "intendr", version: "0.3.0" });
 
 server.tool("get_wallet", "Your wallet balance and remaining budget.", {}, () => callRemote("get_wallet", {}));
 server.tool(
