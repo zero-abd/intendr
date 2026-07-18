@@ -2,7 +2,7 @@ name = "intendr-edge"
 main = "src/index.ts"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
-account_id = "15426a3bba9d3c71638b75322983eb28"
+# account chosen at deploy via the CLOUDFLARE_ACCOUNT_ID env var (kept out of the repo).
 
 # Persistent per-workspace wallet (cumulative spend + live cap).
 [[durable_objects.bindings]]
