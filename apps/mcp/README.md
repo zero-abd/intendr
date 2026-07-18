@@ -5,8 +5,9 @@ spend-capped wallet that can pay for the **Orthogonal** API catalog (company enr
 people/lead search, funding, news, email verification, …) plus commerce providers, all under
 budget guardrails.
 
-It's a thin stdio proxy to the hosted intendr service, which holds the shared Orthogonal key
-and the spend-capped wallet **server-side** — you bring nothing: no key, no config.
+On first run it opens a browser to **sign in / sign up** (Supabase); after that your agent
+spends against **your own** wallet. The Orthogonal key stays server-side — you never handle a
+key. The token is cached at `~/.intendr/auth.json` and refreshed silently.
 
 ## Install
 

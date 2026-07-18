@@ -1,7 +1,7 @@
 {
   "name": "intendr",
-  "version": "0.1.0",
-  "description": "MCP connector for intendr — give any AI agent a spend-capped wallet to pay for the Orthogonal API catalog (plus commerce).",
+  "version": "0.2.0",
+  "description": "MCP connector for intendr — sign in and give any AI agent your own spend-capped wallet to pay for the Orthogonal API catalog (plus commerce).",
   "type": "module",
   "bin": { "intendr": "bin/intendr.mjs" },
   "files": ["bin", "README.md"],
