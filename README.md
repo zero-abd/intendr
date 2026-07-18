@@ -8,6 +8,18 @@
 
 Paste one URL into any MCP-capable chatbot (Claude, ChatGPT, Cursor) and the agent gets money with a cap plus a catalog of paid capabilities. It can enrich a company for 3¢, order a burger through DoorDash's CLI, and book an Uber — and it **stops itself** the moment a purchase would break the budget.
 
+## Connect it
+
+One command — no key, no config:
+
+```bash
+claude mcp add intendr -- npx -y intendr
+```
+
+Or add it as a stdio MCP server in Cursor / ChatGPT desktop: `command: npx`, `args: ["-y", "intendr"]`. Then ask your agent to `search_services`, `get_service`, and `pay_and_run`.
+
+intendr runs **one shared Orthogonal key + spend-capped wallet server-side** — users bring nothing. (Per-user identity & billing via OAuth is on the roadmap.) The connector is a thin proxy to the hosted Worker; see [`apps/mcp/README.md`](apps/mcp/README.md).
+
 ## Why
 
 AI agents can increasingly *do* things that cost money, but there's no safe, portable way to hand one a budget. Giving an agent your card is reckless; wiring bespoke payment + limits into every chatbot is toil. intendr is the missing layer: a single MCP endpoint offering (1) a spend-capped wallet, (2) a catalog of paid capabilities spanning data + commerce, and (3) governance — reserve→settle budgeting, approval gates for expensive or real-world actions, and per-category/merchant limits.
@@ -35,7 +47,11 @@ bun run dev          # turbo: landing + web (Vite) + edge (wrangler dev)
 bun --cwd apps/edge run dev     # just the Worker (MCP + API) at http://localhost:8787
 bun --cwd apps/web run dev      # just the dashboard
 bun --cwd apps/landing run dev  # just the marketing site
+
+ORTHOGONAL_API_KEY=sk-... bun --cwd apps/mcp run start   # the MCP connector (stdio) other agents add
 ```
+
+**MCP connector** (`apps/mcp`): a real stdio MCP server any agent can add (Claude Desktop/Code, Cursor, …). It exposes the **entire Orthogonal catalog** (discovered at runtime via `search_services` → `get_service` → `pay_and_run`) plus commerce providers (Uber, DoorDash) — all metered through the spend-capped wallet. See [`apps/mcp/README.md`](apps/mcp/README.md).
 
 Hosting is **hybrid**: `apps/edge` → Cloudflare Workers (MCP + API + Durable Objects); `apps/web` + `apps/landing` → Vercel. The ECC agent harness under `.claude/` is installed per-developer (see [SKILLS_SETUP.md](SKILLS_SETUP.md)) and is not committed.
 

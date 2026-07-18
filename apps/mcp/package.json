@@ -1,0 +1,22 @@
+{
+  "name": "intendr",
+  "version": "0.1.0",
+  "description": "MCP connector for intendr — give any AI agent a spend-capped wallet to pay for the Orthogonal API catalog (plus commerce).",
+  "type": "module",
+  "bin": { "intendr": "bin/intendr.mjs" },
+  "files": ["bin", "README.md"],
+  "engines": { "node": ">=18" },
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "start": "node bin/intendr.mjs",
+    "typecheck": "node --check bin/intendr.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.23.8"
+  },
+  "keywords": ["mcp", "model-context-protocol", "orthogonal", "ai-agents", "payments", "wallet", "intendr"],
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/zero-abd/intendr.git" },
+  "homepage": "https://github.com/zero-abd/intendr#readme"
+}

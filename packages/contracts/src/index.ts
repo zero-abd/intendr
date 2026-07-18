@@ -93,3 +93,21 @@ export type TraceEvent =
 
 export const toCents = (dollars: number): Cents => Math.round(dollars * 100);
 export const fmtCents = (c: Cents): string => `$${(c / 100).toFixed(2)}`;
+
+// ── Minimal HTTP seam ────────────────────────────────────────────────────────
+// So runtime-agnostic packages (providers, etc.) can make HTTP calls without ever
+// referencing the ambient DOM `fetch`/`Response` types (which would leak into every
+// consumer's lib config). The Worker/Node platform `fetch` is structurally assignable
+// to `FetchLike`; tests can inject a fake.
+export interface HttpResponse {
+  readonly ok: boolean;
+  readonly status: number;
+  json(): Promise<unknown>;
+  text(): Promise<string>;
+}
+export interface HttpRequestInit {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+}
+export type FetchLike = (url: string, init?: HttpRequestInit) => Promise<HttpResponse>;

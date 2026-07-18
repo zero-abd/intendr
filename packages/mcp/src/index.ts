@@ -1,10 +1,22 @@
 // Transport-agnostic MCP tool registry + the atomic pay orchestration.
-// apps/edge mounts this over Cloudflare's McpAgent; a stdio bin can mount it locally.
-import type { BudgetPolicy, IdempotencyKey, PaymentRail, ToolSpec, WorkspaceId } from "@intendr/contracts";
+// apps/edge mounts this over a Durable-Object-backed spend store; apps/mcp mounts it
+// over a local in-process wallet. The orchestration is identical.
+import type {
+  BudgetPolicy,
+  IdempotencyKey,
+  PaymentRail,
+  ReservationId,
+  ServiceDetails,
+  ToolSpec,
+  WorkspaceId,
+} from "@intendr/contracts";
 import { fmtCents } from "@intendr/contracts";
 import { checkGuardrails, type GuardrailConfig, type GuardrailState } from "@intendr/guardrails";
 import { distill } from "@intendr/harness";
 import { ProviderRegistry } from "@intendr/providers";
+
+const MAX_CAP_CENTS = 1_000_000; // $10,000 safety ceiling on raise_cap
+let idemCounter = 0;
 
 export interface McpDeps {
   workspaceId: WorkspaceId;
@@ -18,6 +30,24 @@ export interface McpDeps {
 export interface ToolDef {
   spec: ToolSpec;
   handler: (input: Record<string, unknown>) => Promise<unknown>;
+}
+
+/** Names of required params absent from the call, as `bucket.name` labels. */
+function missingRequiredParams(schema: ServiceDetails["inputSchema"], params: Record<string, unknown>): string[] {
+  const s = schema as { query?: unknown[]; body?: unknown[]; path?: unknown[] } | null;
+  if (!s || typeof s !== "object") return [];
+  const missing: string[] = [];
+  for (const bucket of ["query", "body", "path"] as const) {
+    for (const p of s[bucket] ?? []) {
+      if (p && typeof p === "object" && (p as { required?: unknown }).required === true) {
+        const name = (p as { name?: unknown }).name;
+        if (typeof name !== "string") continue;
+        const provided = (params[bucket] as Record<string, unknown> | undefined)?.[name];
+        if (provided === undefined || provided === "") missing.push(`${bucket}.${name}`);
+      }
+    }
+  }
+  return missing;
 }
 
 export function buildTools(deps: McpDeps): ToolDef[] {
@@ -57,7 +87,7 @@ export function buildTools(deps: McpDeps): ToolDef[] {
     {
       spec: {
         name: "pay_and_run",
-        description: "Atomic: guardrails -> reserve -> run -> settle/refund -> receipt. Returns BLOCKED if a cap trips.",
+        description: "Atomic: guardrails -> reserve -> run -> settle/refund -> receipt. Returns BLOCKED if a cap trips or a param is missing.",
         inputSchema: { id: "string", input: "object" },
       },
       handler: async (input) => {
@@ -67,6 +97,13 @@ export function buildTools(deps: McpDeps): ToolDef[] {
 
         const details = await provider.details(id);
         const category = provider.name;
+        const params = (input.input as Record<string, unknown>) ?? {};
+
+        // Local pre-validation: never make a paid call missing a required param.
+        const missing = missingRequiredParams(details.inputSchema, params);
+        if (missing.length > 0) {
+          return { status: "error", reason: `missing required argument(s): ${missing.join(", ")}` };
+        }
 
         const verdict = checkGuardrails(guardrails, state, {
           provider: provider.name,
@@ -83,18 +120,24 @@ export function buildTools(deps: McpDeps): ToolDef[] {
           return { status: "BLOCKED", reason: check.reason };
         }
 
-        const idem = `idem_${id}_${state.spentCents}` as IdempotencyKey;
-        const reservation = await budget.reserve(workspaceId, details.priceCents, idem);
+        const idem = `idem_${id}_${++idemCounter}` as IdempotencyKey;
+        let reservation: ReservationId;
         try {
-          const result = await provider.run(id, (input.input as Record<string, unknown>) ?? {}, idem);
+          reservation = await budget.reserve(workspaceId, details.priceCents, idem);
+        } catch {
+          // Atomic store refused (cap would be exceeded under concurrency) — surface as BLOCKED.
+          return { status: "BLOCKED", reason: "spend cap would be exceeded" };
+        }
+
+        try {
+          const result = await provider.run(id, params, idem);
           await budget.settle(workspaceId, reservation, result.priceCents);
           state.spentCents += result.priceCents;
           state.spentByCategoryCents[category] = (state.spentByCategoryCents[category] ?? 0) + result.priceCents;
-          const summary = distill(result.data).summary;
           return {
             status: "ok",
             requestId: result.requestId,
-            summary,
+            summary: distill(result.data).summary,
             priceCents: result.priceCents,
             balanceCents: await budget.remaining(workspaceId),
           };
@@ -116,14 +159,22 @@ export function buildTools(deps: McpDeps): ToolDef[] {
     {
       spec: {
         name: "approve",
-        description: "Resolve a pending approval: approve / raise_cap / skip.",
+        description: "Resolve a pending approval: approve / raise_cap / skip. newCapCents (with raise_cap) raises the global cap.",
         inputSchema: { decision: "string", newCapCents: "number?" },
       },
       handler: async (input) => {
-        if (input.decision === "raise_cap" && typeof input.newCapCents === "number") {
-          guardrails.globalCapCents = input.newCapCents;
+        const decision = String(input.decision ?? "");
+        if (decision !== "approve" && decision !== "raise_cap" && decision !== "skip") {
+          return { ok: false, reason: `unknown decision "${decision}" (expected approve | raise_cap | skip)` };
         }
-        return { ok: true, globalCapCents: guardrails.globalCapCents };
+        if (input.newCapCents !== undefined) {
+          const n = input.newCapCents;
+          if (typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > MAX_CAP_CENTS) {
+            return { ok: false, reason: `newCapCents must be a number between 0 and ${MAX_CAP_CENTS}` };
+          }
+          guardrails.globalCapCents = Math.round(n);
+        }
+        return { ok: true, decision, globalCapCents: guardrails.globalCapCents };
       },
     },
   ];
