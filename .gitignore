@@ -33,3 +33,11 @@ Thumbs.db
 
 # ECC agent harness — installed per-developer via SKILLS_SETUP.md, never committed
 .claude/
+
+# Monorepo build / tooling
+.turbo/
+.astro/
+.wrangler/
+.vercel/
+.dev.vars
+*.tsbuildinfo

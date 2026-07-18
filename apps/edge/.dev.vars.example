@@ -1,0 +1,7 @@
+# Copy to `.dev.vars` (gitignored) for `wrangler dev`.
+ORTHOGONAL_API_KEY=""
+KEY_ENCRYPTION_KEY=""
+# RAMP_CLIENT_ID=""
+# RAMP_CLIENT_SECRET=""
+# UBER_CLIENT_ID=""
+# UBER_CLIENT_SECRET=""

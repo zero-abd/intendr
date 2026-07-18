@@ -21,7 +21,23 @@ AI agents can increasingly *do* things that cost money, but there's no safe, por
 
 ## Status
 
-Early scaffold. See [`docs/PLAN.md`](docs/PLAN.md) for the full architecture, MCP tool surface, provider design, workstreams, and demo script.
+Monorepo scaffolded (Bun workspaces + Turborepo). `apps/{landing,web,edge}` + `packages/{contracts,budget,wallet,providers,guardrails,harness,mcp,db,ui}`. The MCP tool surface (`get_wallet`, `search_services`, `get_service`, `pay_and_run`, `get_spend_summary`, `approve`) and the atomic reserve→settle pay path are wired with in-memory stubs and typecheck green; real providers, rails, and Durable-Object persistence are the next steps.
+
+See [`docs/MONOREPO.md`](docs/MONOREPO.md) for the repo structure + Cloudflare/Vercel hosting plan, and [`docs/PLAN.md`](docs/PLAN.md) for the product architecture, providers, and demo script.
+
+## Development
+
+```bash
+bun install          # install + link workspaces
+bun run typecheck    # tsc --noEmit across all packages
+bun run dev          # turbo: landing + web (Vite) + edge (wrangler dev)
+
+bun --cwd apps/edge run dev     # just the Worker (MCP + API) at http://localhost:8787
+bun --cwd apps/web run dev      # just the dashboard
+bun --cwd apps/landing run dev  # just the marketing site
+```
+
+Hosting is **hybrid**: `apps/edge` → Cloudflare Workers (MCP + API + Durable Objects); `apps/web` + `apps/landing` → Vercel. The ECC agent harness under `.claude/` is installed per-developer (see [SKILLS_SETUP.md](SKILLS_SETUP.md)) and is not committed.
 
 ## Agent tooling
 

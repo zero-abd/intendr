@@ -1,0 +1,33 @@
+name = "intendr-edge"
+main = "src/index.ts"
+compatibility_date = "2026-07-01"
+compatibility_flags = ["nodejs_compat"]
+
+# --- Durable Objects: one per wallet/workspace ---
+[durable_objects]
+bindings = [{ name = "WALLET_DO", class_name = "WalletDO" }]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["WalletDO"]
+
+# --- Create these, then paste the ids and uncomment ---
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "intendr"
+# database_id = "TODO"
+#
+# [[kv_namespaces]]
+# binding = "SESSIONS"
+# id = "TODO"
+#
+# [[r2_buckets]]
+# binding = "RAW"
+# bucket_name = "intendr-raw"
+#
+# [[queues.producers]]
+# binding = "SETTLE_Q"
+# queue = "intendr-settle"
+
+[env.production]
+# routes = [{ pattern = "api.intendr.app/*", zone_name = "intendr.app" }]
