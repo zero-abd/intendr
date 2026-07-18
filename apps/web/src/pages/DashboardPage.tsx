@@ -74,7 +74,7 @@ export function DashboardPage() {
       <Card style={{ animation: "rise 0.5s var(--ease) 0.18s both" }}>
         <div className="rowhead">
           <Eyebrow>Recent activity</Eyebrow>
-          <Link to="/activity" className="link-quiet">
+          <Link to="/transactions" className="link-quiet">
             View all →
           </Link>
         </div>

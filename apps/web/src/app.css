@@ -544,6 +544,462 @@
   font-weight: 560;
 }
 
+/* ═══ Landing page ════════════════════════════════════════════ */
+.lp {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 28px 40px;
+  /* Anchor-link clicks glide to the section instead of jumping. */
+  scroll-behavior: smooth;
+}
+/* html carries the actual scroll for the page — smooth-scroll it too. */
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html,
+  .lp {
+    scroll-behavior: auto;
+  }
+}
+
+/* — Top nav (floating contained pill, fixed on scroll) — */
+.lp__nav {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  z-index: 40;
+  margin: 0 auto;
+  max-width: 1000px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 12px 0 22px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-2);
+  background: color-mix(in oklab, var(--bg-elev) 66%, transparent);
+  backdrop-filter: blur(16px) saturate(1.3);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.lp__nav:hover {
+  border-color: var(--hairline-strong);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.lp__navlinks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lp__navlink {
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  font-weight: 540;
+  color: var(--ink-muted);
+  transition: color var(--dur) var(--ease);
+}
+.lp__navlink:hover {
+  color: var(--ink);
+}
+
+/* — Hero — */
+.lp__hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  align-items: center;
+  gap: 48px;
+  padding: 108px 0 96px;
+}
+.lp__hero::before {
+  content: "";
+  position: absolute;
+  inset: -40px -80px auto -80px;
+  height: 460px;
+  background:
+    radial-gradient(46% 60% at 20% 20%, var(--accent-wash), transparent 62%),
+    radial-gradient(40% 50% at 92% 30%, rgba(124, 147, 255, 0.07), transparent 60%);
+  pointer-events: none;
+  z-index: -1;
+}
+.lp__herocopy {
+  max-width: 560px;
+}
+.lp__headline {
+  font-family: var(--font-display);
+  font-size: clamp(30px, 3.9vw, 47px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.032em;
+  margin-top: 18px;
+}
+.lp__sub {
+  margin-top: 15px;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  max-width: 490px;
+}
+.lp__cta {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+.lp__cta .ui-btn {
+  height: 46px;
+  padding: 0 22px;
+  font-size: 14.5px;
+}
+/* — Install command (click to copy) — */
+.lp__cmd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 440px;
+  margin-top: 18px;
+  padding: 11px 12px 11px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline-2);
+  background: color-mix(in oklab, var(--bg) 60%, transparent);
+  text-align: left;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.lp__cmd:hover {
+  border-color: var(--accent-dim);
+  background: var(--accent-wash);
+}
+.lp__cmd-prompt {
+  color: var(--accent);
+  font-size: 13px;
+  flex: none;
+}
+.lp__cmd-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lp__cmd-copy {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 3px 8px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--hairline-2);
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.lp__cmd:hover .lp__cmd-copy {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+.lp__herofoot {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--ink-faint);
+  letter-spacing: 0.02em;
+}
+
+/* — "Works with" logo strip — */
+.lp__strip {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 24px 0 8px;
+  flex-wrap: wrap;
+}
+.lp__striplabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  flex: none;
+}
+.lp__striprow {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  flex-wrap: wrap;
+}
+.lp__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink-faint);
+  transition: color var(--dur) var(--ease);
+}
+.lp__logo:hover {
+  color: var(--ink);
+}
+.lp__logomark {
+  display: inline-flex;
+}
+.lp__logoname {
+  font-size: 14px;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+}
+
+/* — Hero visual — */
+.lp__herovisual {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+.lp__card-float {
+  width: 100%;
+  max-width: 360px;
+  animation: lp-float 7s var(--ease-in-out) infinite;
+}
+@keyframes lp-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1.2deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(-1.2deg);
+  }
+}
+.lp__metercard {
+  width: 100%;
+  max-width: 360px;
+}
+
+/* — Sections — */
+.lp__section {
+  padding: 64px 0;
+  border-top: 1px solid var(--hairline);
+  /* Land below the floating pill when reached via an anchor link. */
+  scroll-margin-top: 92px;
+}
+.lp__sectionhead {
+  max-width: 640px;
+  margin-bottom: 36px;
+}
+.lp__h2 {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 650;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  margin-top: 12px;
+}
+
+/* — How-it-works steps — */
+.lp__steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.lp__step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px !important;
+}
+.lp__stepnum {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+}
+.lp__steptitle {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.lp__stepbody {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+
+/* — Feature grid — */
+.lp__features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.lp__feature {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px !important;
+}
+.lp__featuredot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+.lp__featuretitle {
+  font-size: 16.5px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+/* — Supported services — */
+.lp__servicegroups {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.lp__grouplabel {
+  display: inline-block;
+  margin-bottom: 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.lp__servicegrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.lp__service {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px !important;
+  color: var(--ink-muted);
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.lp__service:hover {
+  color: var(--accent);
+  border-color: rgba(198, 242, 78, 0.24);
+  transform: translateY(-2px);
+}
+.lp__logomark--lg {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--ink);
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.lp__service:hover .lp__logomark--lg {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+.lp__servicemeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.lp__servicename {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.lp__servicetag {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+.lp__servicenote {
+  margin-top: 26px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+  max-width: 620px;
+}
+
+/* — Closing CTA — */
+.lp__closing {
+  padding: 40px 0 24px;
+}
+.lp__closingcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 56px 40px !important;
+}
+.lp__closingcard .lp__cta {
+  justify-content: center;
+}
+
+/* — Footer — */
+.lp__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 32px;
+  border-top: 1px solid var(--hairline);
+  flex-wrap: wrap;
+}
+.lp__footnote {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+@media (max-width: 900px) {
+  .lp__hero {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding: 96px 0 64px;
+  }
+  .lp__herovisual {
+    order: -1;
+  }
+  .lp__steps {
+    grid-template-columns: 1fr;
+  }
+  .lp__features {
+    grid-template-columns: 1fr;
+  }
+  .lp__servicegrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .lp__navlink {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .lp {
+    padding: 0 18px 32px;
+  }
+  .lp__nav {
+    left: 12px;
+    right: 12px;
+    padding: 0 10px 0 16px;
+  }
+  .lp__cta .ui-btn {
+    flex: 1;
+  }
+  .lp__servicegrid {
+    grid-template-columns: 1fr;
+  }
+  .lp__cmd-text {
+    font-size: 11.5px;
+  }
+}
+
 /* ═══ Config-needed screen ════════════════════════════════════ */
 .config {
   min-height: 100dvh;
