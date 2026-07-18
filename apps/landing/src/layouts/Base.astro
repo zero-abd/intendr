@@ -1,0 +1,259 @@
+---
+// Site shell: brand tokens, fonts, global styles, SEO meta.
+// Brand is the source-of-truth acid-lime dark theme from apps/edge/src/login.ts.
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "intendr — a spend-capped wallet any AI agent can pay with",
+  description = "Point any chatbot at one MCP URL and your agent gets money with a cap. It can pay for real data APIs and real-world commerce — and it stops itself before it overspends.",
+} = Astro.props;
+
+const canonical = "https://intendr.app/";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#08090b" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content="intendr" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23c6f24e'/%3E%3C/svg%3E"
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <slot />
+    <style is:global>
+      :root {
+        --bg: #08090b;
+        --panel: #131619;
+        --elev: #0e1013;
+        --ink: #f3f6f4;
+        --muted: #9aa3a0;
+        --faint: #5b6360;
+        --accent: #c6f24e;
+        --accentInk: #0a0d05;
+        --danger: #ff5d63;
+        --hair: rgba(255, 255, 255, 0.08);
+        --maxw: 1080px;
+        --radius: 16px;
+        --radius-sm: 10px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        * {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(900px 520px at 82% -12%, rgba(198, 242, 78, 0.1), transparent 60%),
+          radial-gradient(700px 420px at 8% 4%, rgba(198, 242, 78, 0.05), transparent 62%),
+          var(--bg);
+        color: var(--ink);
+        font-family: "Geist", system-ui, -apple-system, sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      h1,
+      h2,
+      h3 {
+        font-family: "Bricolage Grotesque", system-ui, sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        line-height: 1.08;
+        margin: 0;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      code,
+      kbd,
+      pre,
+      .mono {
+        font-family: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+      }
+
+      .accent {
+        color: var(--accent);
+      }
+
+      /* Layout primitives */
+      .wrap {
+        width: 100%;
+        max-width: var(--maxw);
+        margin-inline: auto;
+        padding-inline: 24px;
+      }
+
+      section {
+        padding-block: clamp(56px, 8vw, 104px);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: "Geist Mono", monospace;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin: 0 0 16px;
+      }
+
+      .eyebrow::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 2px;
+        background: var(--accent);
+        box-shadow: 0 0 10px rgba(198, 242, 78, 0.7);
+      }
+
+      .section-head {
+        max-width: 640px;
+        margin-bottom: clamp(32px, 5vw, 52px);
+      }
+
+      .section-head h2 {
+        font-size: clamp(28px, 4.4vw, 40px);
+      }
+
+      .section-head p {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: clamp(15px, 1.6vw, 17px);
+      }
+
+      /* Card surface */
+      .card {
+        border: 1px solid var(--hair);
+        border-radius: var(--radius);
+        background: linear-gradient(180deg, var(--panel), var(--elev));
+        box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.7);
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 13px 22px;
+        border-radius: var(--radius-sm);
+        font: inherit;
+        font-weight: 600;
+        font-size: 15px;
+        text-decoration: none;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition:
+          transform 0.12s ease,
+          background 0.15s ease,
+          border-color 0.15s ease;
+      }
+
+      .btn:active {
+        transform: translateY(1px);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: var(--accentInk);
+      }
+
+      .btn-primary:hover {
+        background: #d3f96a;
+      }
+
+      .btn-ghost {
+        background: transparent;
+        color: var(--ink);
+        border-color: var(--hair);
+      }
+
+      .btn-ghost:hover {
+        border-color: rgba(255, 255, 255, 0.22);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      /* Focus visibility for keyboard users */
+      a:focus-visible,
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+        border-radius: 6px;
+      }
+
+      .skip-link {
+        position: absolute;
+        left: -999px;
+        top: 8px;
+        z-index: 100;
+        background: var(--accent);
+        color: var(--accentInk);
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      .skip-link:focus {
+        left: 8px;
+      }
+    </style>
+  </body>
+</html>

@@ -37,6 +37,7 @@ Thumbs.db
 # Monorepo build / tooling
 .turbo/
 .astro/
+apps/landing/src/env.d.ts
 .wrangler/
 .vercel/
 .dev.vars

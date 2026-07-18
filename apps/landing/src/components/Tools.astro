@@ -1,0 +1,74 @@
+---
+// The six MCP tools, one-line each — descriptions match packages/mcp/src/index.ts.
+const tools = [
+  { name: "get_wallet", desc: "Balance, caps, spent, and remaining budget." },
+  { name: "search_services", desc: "Discover paid capabilities across all providers — data and commerce." },
+  { name: "get_service", desc: "Schema, price, and side-effect class for one capability." },
+  { name: "pay_and_run", desc: "Atomic: guardrails → reserve → run → settle/refund → receipt. Returns BLOCKED if a cap trips." },
+  { name: "get_spend_summary", desc: "Spent, overspend blocked (dollars saved), and remaining." },
+  { name: "approve", desc: "Resolve a pending approval: approve, raise_cap, or skip." },
+];
+---
+
+<section id="tools" aria-labelledby="tools-title">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">The surface</p>
+      <h2 id="tools-title">Six MCP tools, that's the whole API</h2>
+      <p>Your agent routes off these descriptions. Four are the MVP; all six ship today.</p>
+    </div>
+
+    <ul class="tool-list">
+      {
+        tools.map((t) => (
+          <li class="tool">
+            <code class="tool-name mono">{t.name}</code>
+            <p class="tool-desc">{t.desc}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .tool-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 720px) {
+    .tool-list {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .tool {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 18px 20px;
+    border: 1px solid var(--hair);
+    border-radius: 12px;
+    background: linear-gradient(180deg, var(--panel), var(--elev));
+    transition: border-color 0.15s ease;
+  }
+  .tool:hover {
+    border-color: rgba(198, 242, 78, 0.25);
+  }
+  .tool-name {
+    align-self: flex-start;
+    color: var(--accent);
+    font-size: 14px;
+    background: rgba(198, 242, 78, 0.07);
+    border: 1px solid rgba(198, 242, 78, 0.18);
+    padding: 3px 9px;
+    border-radius: 7px;
+  }
+  .tool-desc {
+    color: var(--muted);
+    font-size: 14px;
+  }
+</style>

@@ -1,0 +1,108 @@
+---
+import CopyChip from "./CopyChip.astro";
+
+const jsonConfig = `{
+  "mcpServers": {
+    "intendr": {
+      "command": "npx",
+      "args": ["-y", "intendr"]
+    }
+  }
+}`;
+---
+
+<section id="connect" aria-labelledby="connect-title">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Connect</p>
+      <h2 id="connect-title">Connect in 30 seconds</h2>
+      <p>No API key. The first run opens a browser sign-in — your own wallet, with a $50 welcome
+        credit. The token is cached and refreshed silently after that.</p>
+    </div>
+
+    <div class="connect-grid">
+      <div class="card connect-card">
+        <div class="cc-head">
+          <span class="cc-step">1</span>
+          <h3>Claude Code</h3>
+        </div>
+        <p class="cc-lede">One line in your terminal.</p>
+        <CopyChip command="claude mcp add intendr -- npx -y intendr" />
+      </div>
+
+      <div class="card connect-card">
+        <div class="cc-head">
+          <span class="cc-step">2</span>
+          <h3>Claude Desktop / Cursor</h3>
+        </div>
+        <p class="cc-lede">Add a stdio MCP server to your config.</p>
+        <pre class="code-block mono"><code>{jsonConfig}</code></pre>
+      </div>
+    </div>
+
+    <p class="connect-foot mono">
+      first run → browser sign-in · $50 welcome credit · token cached &amp; refreshed · no key to
+      manage
+    </p>
+  </div>
+</section>
+
+<style>
+  .connect-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 820px) {
+    .connect-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .connect-card {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+  .cc-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .cc-step {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--accentInk);
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .cc-head h3 {
+    font-size: 19px;
+  }
+  .cc-lede {
+    margin: 12px 0 16px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .code-block {
+    margin: 0;
+    padding: 16px;
+    background: #0b0d10;
+    border: 1px solid var(--hair);
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    font-size: 12.5px;
+    line-height: 1.55;
+    overflow-x: auto;
+  }
+  .connect-foot {
+    margin-top: 22px;
+    color: var(--faint);
+    font-size: 12px;
+    text-align: center;
+  }
+</style>
