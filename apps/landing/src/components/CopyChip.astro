@@ -1,0 +1,107 @@
+---
+// A copyable mono command chip. Progressive enhancement: the command is fully
+// readable and selectable without JS; the button copies it to the clipboard.
+interface Props {
+  command: string;
+  label?: string;
+}
+const { command, label = "Copy command" } = Astro.props;
+---
+
+<div class="chip" data-copy-chip>
+  <span class="chip-prompt" aria-hidden="true">$</span>
+  <code class="chip-cmd mono" data-copy-text>{command}</code>
+  <button type="button" class="chip-btn" data-copy-btn aria-label={label}>
+    <span class="chip-btn-label" data-copy-label>Copy</span>
+  </button>
+</div>
+
+<style>
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 12px 12px 16px;
+    border: 1px solid var(--hair);
+    border-radius: var(--radius-sm);
+    background: #0b0d10;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .chip-prompt {
+    color: var(--accent);
+    font-family: "Geist Mono", monospace;
+    font-size: 14px;
+    user-select: none;
+  }
+  .chip-cmd {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--ink);
+    font-size: 13.5px;
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .chip-cmd::-webkit-scrollbar {
+    display: none;
+  }
+  .chip-btn {
+    flex: 0 0 auto;
+    padding: 7px 13px;
+    border-radius: 8px;
+    border: 1px solid var(--hair);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--muted);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease;
+  }
+  .chip-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--ink);
+  }
+  .chip-btn.copied {
+    background: var(--accent);
+    color: var(--accentInk);
+    border-color: transparent;
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-copy-chip]").forEach((chip) => {
+    const btn = chip.querySelector<HTMLButtonElement>("[data-copy-btn]");
+    const text = chip.querySelector<HTMLElement>("[data-copy-text]")?.textContent ?? "";
+    const label = chip.querySelector<HTMLElement>("[data-copy-label]");
+    if (!btn || !label) return;
+    btn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        // Fallback for older / insecure contexts.
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand("copy");
+        } catch {
+          /* give up silently */
+        }
+        ta.remove();
+      }
+      label.textContent = "Copied ✓";
+      btn.classList.add("copied");
+      window.setTimeout(() => {
+        label.textContent = "Copy";
+        btn.classList.remove("copied");
+      }, 1600);
+    });
+  });
+</script>

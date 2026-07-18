@@ -7,9 +7,13 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "typecheck": "echo \"[landing] astro check TODO\""
+    "typecheck": "astro check"
   },
   "dependencies": {
     "astro": "^4.16.18"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "typescript": "^5.7.2"
   }
 }
