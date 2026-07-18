@@ -1,7 +1,7 @@
-// CapabilityProvider registry + the concrete providers.
+// CapabilityProvider registry + concrete providers.
 // OrthogonalProvider makes REAL calls to https://api.orthogonal.com/v1 (search/details/run)
-// with a Bearer API key. It takes an injected `fetch` (FetchLike) so this package stays
-// runtime-agnostic — the Worker and the Node MCP server both pass their platform fetch.
+// with a Bearer API key and an injected `fetch` (FetchLike) so this package stays
+// runtime-agnostic. Uber/DoorDash are believable mocks behind the same interface.
 import { z } from "zod";
 import type {
   CapabilityProvider,
@@ -36,8 +36,8 @@ export class ProviderRegistry {
 }
 
 // ── Orthogonal (real) ────────────────────────────────────────────────────────
-// Service id encodes the endpoint identity so the connector stays stateless across
-// tool calls: `orthogonal:<slug>::<method>::<path>`.
+// Service id encodes endpoint identity so the connector stays stateless:
+//   orthogonal:<slug>::<METHOD>::<path>
 const ORTHO_PREFIX = "orthogonal:";
 const ORTHO_DEFAULT_BASE = "https://api.orthogonal.com/v1";
 
@@ -103,13 +103,25 @@ export class OrthogonalProvider implements CapabilityProvider {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      throw new Error(`orthogonal ${path} failed (${res.status}): ${detail.slice(0, 300)}`);
+      // Surface a clean message (lift the upstream `error`/`message`), and note that
+      // 4xx are validation failures the gateway rejects BEFORE billing (no charge).
+      const raw = await res.text().catch(() => "");
+      let detail = raw.slice(0, 300);
+      try {
+        const j = JSON.parse(raw) as Record<string, unknown>;
+        if (typeof j.error === "string") detail = j.error;
+        else if (typeof j.message === "string") detail = j.message;
+      } catch {
+        /* not JSON — keep raw */
+      }
+      const noCharge = res.status >= 400 && res.status < 500 ? " (no credits charged)" : "";
+      throw new Error(`orthogonal ${path} ${res.status}: ${detail}${noCharge}`);
     }
     return res.json();
   }
 
   async search(query: string): Promise<ServiceRef[]> {
+    if (!query.trim()) return [];
     const parsed = SearchResponseSchema.parse(await this.post("/search", { prompt: query, limit: 10 }));
     const refs: ServiceRef[] = [];
     for (const api of parsed.results) {
@@ -132,19 +144,29 @@ export class OrthogonalProvider implements CapabilityProvider {
       id,
       provider: this.name,
       title: `${ep.method.toUpperCase()} ${slug}${ep.path}`,
+      // Uniform {query, body, path} shape across all providers, so an agent can parse one thing.
       inputSchema: { query: ep.queryParams ?? [], body: ep.bodyParams ?? [], path: ep.pathParams ?? [] },
-      priceCents: ep.price !== undefined ? Math.round(ep.price * 100) : 0,
+      // Full-precision cents (e.g. 1.225), so get_service matches the actual charge.
+      priceCents: ep.price !== undefined ? ep.price * 100 : 0,
       dynamicPricing: ep.hasDynamicPricing === true,
       sideEffect: classifySideEffect(ep.method, ep.path, ep.description ?? ""),
     };
   }
 
   async run(id: string, input: Record<string, unknown>, idem: IdempotencyKey): Promise<RunResult> {
-    const { slug, path } = decodeOrthoId(id);
+    const decoded = decodeOrthoId(id);
+    // Substitute path params ({name} or :name) into the endpoint path from input.path.
+    let path = decoded.path;
+    const pathParams = input.path as Record<string, unknown> | undefined;
+    if (pathParams) {
+      for (const [k, v] of Object.entries(pathParams)) {
+        path = path.replace(`{${k}}`, encodeURIComponent(String(v))).replace(`:${k}`, encodeURIComponent(String(v)));
+      }
+    }
     const body = (input.body as Record<string, unknown> | undefined) ?? undefined;
     const query = stringifyQuery(input.query as Record<string, unknown> | undefined);
     const parsed = RunResponseSchema.parse(
-      await this.post("/run", { api: slug, path, body, query }, { "idempotency-key": idem }),
+      await this.post("/run", { api: decoded.slug, path, body, query }, { "idempotency-key": idem }),
     );
     return {
       ok: parsed.success,
@@ -168,14 +190,12 @@ const MUTATE_HINTS = [
   "publish", "submit", "cancel", "upload", "charge", "schedule", "write",
 ];
 
-/** GET is a read; other verbs default to read unless the path/description mutates the world. */
 function classifySideEffect(method: string, path: string, description: string): SideEffectClass {
   if (method.toUpperCase() === "GET") return "read";
   const haystack = `${path} ${description}`.toLowerCase();
   return MUTATE_HINTS.some((h) => haystack.includes(h)) ? "write" : "read";
 }
 
-/** The gateway rejects numeric query values — coerce everything to strings. */
 function stringifyQuery(query: Record<string, unknown> | undefined): Record<string, string> | undefined {
   if (!query) return undefined;
   const out: Record<string, string> = {};
@@ -184,12 +204,14 @@ function stringifyQuery(query: Record<string, unknown> | undefined): Record<stri
 }
 
 // ── Real-world commerce (mocked until dd-cli / Uber sandbox are configured) ───
+// search() only matches intent-relevant queries so these don't pollute data searches.
 export class DoorDashProvider implements CapabilityProvider {
   readonly name = "doordash";
   constructor(private readonly useCli = false) {}
 
   async search(query: string): Promise<ServiceRef[]> {
-    return [{ id: "doordash:order", provider: this.name, title: `Order food — ${query}` }];
+    if (!/food|eat|meal|restaurant|order|deliver|burger|pizza|dinner|lunch|hungry|takeout|snack/i.test(query)) return [];
+    return [{ id: "doordash:order", provider: this.name, title: "Order food via DoorDash" }];
   }
 
   async details(id: string): Promise<ServiceDetails> {
@@ -197,7 +219,14 @@ export class DoorDashProvider implements CapabilityProvider {
       id,
       provider: this.name,
       title: "Place a DoorDash order",
-      inputSchema: { restaurant: "string", items: "string[]" },
+      inputSchema: {
+        query: [],
+        body: [
+          { name: "restaurant", type: "string", required: false },
+          { name: "items", type: "array", required: true },
+        ],
+        path: [],
+      },
       priceCents: 1850,
       dynamicPricing: true,
       sideEffect: "write",
@@ -205,10 +234,11 @@ export class DoorDashProvider implements CapabilityProvider {
   }
 
   async run(id: string, input: Record<string, unknown>, _idem: IdempotencyKey): Promise<RunResult> {
+    const body = (input.body as Record<string, unknown> | undefined) ?? input;
     return {
       ok: true,
       priceCents: 1850,
-      data: { orderId: `mock-${newRequestId()}`, eta: "25 min", items: input.items ?? [] },
+      data: { orderId: `mock-${newRequestId()}`, eta: "25 min", items: body.items ?? [] },
       requestId: newRequestId(),
     };
   }
@@ -218,7 +248,8 @@ export class UberProvider implements CapabilityProvider {
   readonly name = "uber";
 
   async search(query: string): Promise<ServiceRef[]> {
-    return [{ id: "uber:ride", provider: this.name, title: `Book a ride — ${query}` }];
+    if (!/ride|uber|car|taxi|drive|airport|trip|commute|lyft|pickup|ride-hail|rideshare/i.test(query)) return [];
+    return [{ id: "uber:ride", provider: this.name, title: "Book a ride via Uber" }];
   }
 
   async details(id: string): Promise<ServiceDetails> {
@@ -226,7 +257,14 @@ export class UberProvider implements CapabilityProvider {
       id,
       provider: this.name,
       title: "Book an Uber ride",
-      inputSchema: { from: "string", to: "string" },
+      inputSchema: {
+        query: [],
+        body: [
+          { name: "from", type: "string", required: true },
+          { name: "to", type: "string", required: true },
+        ],
+        path: [],
+      },
       priceCents: 2800,
       dynamicPricing: true,
       sideEffect: "write",
@@ -234,10 +272,11 @@ export class UberProvider implements CapabilityProvider {
   }
 
   async run(id: string, input: Record<string, unknown>, _idem: IdempotencyKey): Promise<RunResult> {
+    const body = (input.body as Record<string, unknown> | undefined) ?? input;
     return {
       ok: true,
       priceCents: 2800,
-      data: { rideId: `mock-${newRequestId()}`, from: input.from, to: input.to, eta: "6 min" },
+      data: { rideId: `mock-${newRequestId()}`, from: body.from, to: body.to, eta: "6 min" },
       requestId: newRequestId(),
     };
   }

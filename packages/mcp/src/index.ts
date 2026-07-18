@@ -120,10 +120,14 @@ export function buildTools(deps: McpDeps): ToolDef[] {
         inputSchema: { decision: "string", newCapCents: "number?" },
       },
       handler: async (input) => {
-        if (input.decision === "raise_cap" && typeof input.newCapCents === "number") {
+        const decision = String(input.decision ?? "");
+        if (decision !== "approve" && decision !== "raise_cap" && decision !== "skip") {
+          return { ok: false, reason: `unknown decision "${decision}" (expected approve | raise_cap | skip)` };
+        }
+        if (typeof input.newCapCents === "number" && input.newCapCents >= 0) {
           guardrails.globalCapCents = input.newCapCents;
         }
-        return { ok: true, globalCapCents: guardrails.globalCapCents };
+        return { ok: true, decision, globalCapCents: guardrails.globalCapCents };
       },
     },
   ];
