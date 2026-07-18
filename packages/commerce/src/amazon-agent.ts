@@ -9,7 +9,7 @@
 // One source of mock truth → the slice behaves identically with or without the
 // service running.
 import type { Cents } from "@intendr/contracts";
-import type { CardInstrument } from "./cards.js";
+import type { CardInstrument, CredentialRef } from "./cards.js";
 import type { Address } from "./location.js";
 
 export interface AmazonProduct {
@@ -32,8 +32,14 @@ export interface AmazonPurchaseRequest {
   query?: string; // used when no asin: buys the top matching product
   quantity?: number;
   address: Address;
-  /** The scoped virtual card to enter at checkout. Present only when confirm=true. */
+  /**
+   * A full mock card to enter directly (mock issuer only). For real issuers the
+   * PAN never leaves the executor — cardRef is passed instead and the executor
+   * redeems the PAN server-side via consumeCardCredentials().
+   */
   card?: CardInstrument;
+  /** Token reference for the real card flow (PAN redeemed by the executor). */
+  cardRef?: CredentialRef;
   confirm: boolean;
 }
 

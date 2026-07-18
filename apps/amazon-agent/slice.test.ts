@@ -4,8 +4,8 @@
 // with an in-memory wallet + the mock card issuer — no browser, no real money.
 // Run from repo root: bun run test/amazon-slice.test.ts
 import { createBudgetPolicy } from "@intendr/budget";
-import { MockCardIssuer } from "@intendr/commerce";
-import type { Cents, WorkspaceId } from "@intendr/contracts";
+import { MockCardIssuer, VirtualCardsIssuer, consumeCardCredentials } from "@intendr/commerce";
+import type { Cents, FetchLike, WorkspaceId } from "@intendr/contracts";
 import { checkGuardrails } from "@intendr/guardrails";
 import { buildTools } from "@intendr/mcp";
 import { AmazonProvider, ProviderRegistry } from "@intendr/providers";
@@ -64,7 +64,34 @@ async function main() {
 
   // 6. the mock card is a non-chargeable test PAN (no real money)
   const card = await new MockCardIssuer().issue({ amountCents: 1500, merchant: "amazon" });
-  assert(card.mock === true && card.instrument.last4 === "4242", "issuer returns a mock test card (4242, no real money)");
+  assert(card.mock === true && card.instrument?.last4 === "4242", "mock issuer returns a test card (4242, no real money)");
+
+  // 6b. VirtualCardsIssuer adapter → apps/virtual-cards: issues a TOKEN, never a PAN.
+  let issuedBody: Record<string, unknown> = {};
+  const fakeIssueFetch: FetchLike = async (url, init) => {
+    issuedBody = JSON.parse(String(init?.body ?? "{}"));
+    assert(url.endsWith("/api/virtual-cards"), "VirtualCardsIssuer POSTs the public issue endpoint");
+    return { ok: true, status: 201, json: async () => ({ success: true, card: { orderId: issuedBody.orderId, cardToken: "vault_tok_123", lastFour: "9999", state: "OPEN", type: "SINGLE_USE", maximumAmount: 2000, currency: "USD" } }), text: async () => "" };
+  };
+  const vc = new VirtualCardsIssuer({ fetch: fakeIssueFetch, baseUrl: "http://vc.local", accountToken: "acct_x" });
+  const issued = await vc.issue({ amountCents: 1358, maxAmountCents: 2000, merchant: "amazon", orderId: "order_42", userId: "u1" });
+  assert(issued.instrument === undefined && issued.mock === false, "real issue returns NO PAN (token flow)");
+  assert(issued.credentialRef?.secureCredentialToken === "vault_tok_123" && issued.last4 === "9999", "real issue returns a redeemable card token + last4");
+  assert(issuedBody.merchantName === "amazon" && issuedBody.expectedAmount === 1358 && issuedBody.maximumAmount === 2000, "issue payload carries merchant + amounts (cents)");
+
+  // 6c. consumeCardCredentials → the internal, authenticated PAN redemption (executor-only).
+  let consumeAuth = "";
+  const fakeConsumeFetch: FetchLike = async (url, init) => {
+    consumeAuth = (init?.headers as Record<string, string>)?.authorization ?? "";
+    assert(url.endsWith("/internal/card-credentials/consume"), "consume hits the internal endpoint");
+    return { ok: true, status: 200, json: async () => ({ orderId: "order_42", lithicCardToken: "card_tok", cardData: { pan: "4111111111111111", cvv: "737" } }), text: async () => "" };
+  };
+  const creds = await consumeCardCredentials(
+    { fetch: fakeConsumeFetch, baseUrl: "http://vc.local", internalServiceToken: "INTERNAL_SECRET", executorId: "amazon-agent" },
+    issued.credentialRef!,
+  );
+  assert(consumeAuth === "Bearer INTERNAL_SECRET", "consume authenticates with the internal service token");
+  assert((creds.cardData as { pan: string }).pan === "4111111111111111", "executor redeems the real PAN server-side (never in the model/edge)");
 
   // 7. guardrail: a confirmed pricey write is still capped
   const overCap = checkGuardrails({ globalCapCents: 2500 as Cents, categoryCapsCents: {}, merchantAllowlist: [] },

@@ -5,7 +5,7 @@ import { useData } from "../hooks/DataProvider";
 import { addFunds, updateCaps } from "../api/wallet";
 import { totalSpent } from "../api/transactions";
 import { listFundingCards } from "../api/cards";
-import { fmtCents, dollarsToCents, centsToDollarInput, relativeTime } from "../lib/format";
+import { fmtCents, dollarsToCents, centsToDollarInput, formatService, relativeTime } from "../lib/format";
 import { useAuth } from "../auth/AuthProvider";
 import type { FundingCard } from "../api/types";
 
@@ -88,7 +88,7 @@ export function DashboardPage() {
               <li key={t.id} className="tx">
                 <div className="tx__dot" data-status={t.status} />
                 <div className="tx__main">
-                  <span className="tx__service">{t.service}</span>
+                  <span className="tx__service" title={t.service}>{formatService(t.service)}</span>
                   <span className="tx__time">{relativeTime(t.created_at)}</span>
                 </div>
                 <span className="tx__amt mono">{fmtCents(t.cents)}</span>

@@ -164,8 +164,10 @@ export class AmazonProvider implements CapabilityProvider {
         zip: address.postalCode,
         idempotencyKey: String(_idem),
       });
+      // Mock issuer → pass the (test) instrument directly. Real issuer → pass only the
+      // token ref; the executor redeems the PAN server-side (PAN never transits here).
       const result = await this.agent<AmazonPurchaseResponse>("purchase", {
-        asin, query, quantity, address, card: card.instrument, confirm: true,
+        asin, query, quantity, address, card: card.instrument, cardRef: card.credentialRef, confirm: true,
       } satisfies AmazonPurchaseRequest);
       if (!result.placed) throw new Error(result.note ?? "amazon purchase did not complete");
       return {
