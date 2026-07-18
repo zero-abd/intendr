@@ -1,8 +1,7 @@
 import { createBudgetPolicy } from "@intendr/budget";
-import type { FetchLike, WorkspaceId } from "@intendr/contracts";
+import type { Cents, FetchLike, PaymentRail, WorkspaceId } from "@intendr/contracts";
 import { buildTools, type McpDeps, type ToolDef } from "@intendr/mcp";
 import { DoorDashProvider, OrthogonalProvider, ProviderRegistry, UberProvider } from "@intendr/providers";
-import { LocalWalletRail } from "@intendr/wallet";
 
 interface McpEnv {
   ORTHOGONAL_API_KEY?: string;
@@ -10,7 +9,6 @@ interface McpEnv {
 }
 
 const SUPPORTED_PROTOCOL = "2024-11-05";
-const OPENING_BALANCE_CENTS = 2000;
 const DEFAULT_CAP_CENTS = 2000;
 const WORKSPACE = "demo";
 
@@ -77,56 +75,60 @@ const rpcOk = (id: unknown, result: unknown) => ({ jsonrpc: "2.0", id: id ?? nul
 const rpcErr = (id: unknown, code: number, message: string) => ({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
 const msg = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
-interface WalletState {
-  spentCents: number;
-  spentByCategory: Record<string, number>;
-  globalCapCents: number;
-}
-
-function walletStub(env: McpEnv) {
+function walletStub(env: McpEnv): DurableObjectStub {
   return env.WALLET_DO.get(env.WALLET_DO.idFromName(WORKSPACE));
 }
 
-async function loadState(env: McpEnv): Promise<WalletState> {
-  try {
-    const res = await walletStub(env).fetch(`https://wallet/load?defaultCapCents=${DEFAULT_CAP_CENTS}`, { method: "POST" });
-    return (await res.json()) as WalletState;
-  } catch {
-    return { spentCents: 0, spentByCategory: {}, globalCapCents: DEFAULT_CAP_CENTS };
+async function walletOp(stub: DurableObjectStub, op: string, body?: unknown): Promise<Record<string, unknown>> {
+  const res = await stub.fetch(`https://wallet/${op}`, { method: "POST", body: body ? JSON.stringify(body) : "{}" });
+  return (await res.json()) as Record<string, unknown>;
+}
+
+/** SpendStorePort backed by the WalletDO — every op is atomic within the DO. */
+class DurableSpendStore implements PaymentRail {
+  readonly id = "durable";
+  constructor(private readonly stub: DurableObjectStub) {}
+  async tryReserve(_ws: WorkspaceId, cents: Cents, capCents: Cents): Promise<boolean> {
+    return (await walletOp(this.stub, "reserve", { cents, capCents })).ok === true;
+  }
+  async settle(_ws: WorkspaceId, reservationCents: Cents, actualCents: Cents): Promise<void> {
+    await walletOp(this.stub, "settle", { reservationCents, actualCents });
+  }
+  async refund(_ws: WorkspaceId, cents: Cents): Promise<void> {
+    await walletOp(this.stub, "refund", { cents });
+  }
+  async remaining(_ws: WorkspaceId): Promise<Cents> {
+    return Number((await walletOp(this.stub, "state")).remainingCents ?? 0);
   }
 }
 
-async function saveState(env: McpEnv, s: WalletState): Promise<void> {
-  try {
-    await walletStub(env).fetch("https://wallet/save", { method: "POST", body: JSON.stringify(s) });
-  } catch {
-    /* best-effort persistence */
-  }
-}
+async function buildDeps(env: McpEnv): Promise<McpDeps> {
+  const stub = walletStub(env);
+  const snap = await walletOp(stub, "state");
+  const globalCapCents = Number(snap.globalCapCents ?? DEFAULT_CAP_CENTS);
+  const spentCents = Number(snap.spentCents ?? 0);
+  const spentByCategoryCents = (snap.spentByCategory as Record<string, number> | undefined) ?? {};
 
-function buildDeps(env: McpEnv, persisted: WalletState): McpDeps {
   // Call globalThis.fetch explicitly (a bare/stored fetch throws "Illegal invocation" on Workers).
   const platformFetch: FetchLike = (url, init) => globalThis.fetch(url, init);
-
   const registry = new ProviderRegistry()
     .register(new OrthogonalProvider({ apiKey: env.ORTHOGONAL_API_KEY ?? "", fetch: platformFetch }))
     .register(new UberProvider())
     .register(new DoorDashProvider());
 
-  const remaining = Math.max(0, OPENING_BALANCE_CENTS - persisted.spentCents);
-  const rail = new LocalWalletRail(remaining);
+  const store = new DurableSpendStore(stub);
   const budget = createBudgetPolicy({
-    store: rail,
-    settings: { sessionCapCents: persisted.globalCapCents, monthlyCapCents: 1_000_000, perCallWarnCents: 200 },
+    store,
+    settings: { sessionCapCents: globalCapCents, monthlyCapCents: globalCapCents, perCallWarnCents: 200 },
   });
 
   return {
     workspaceId: WORKSPACE as WorkspaceId,
     registry,
     budget,
-    rail,
-    guardrails: { globalCapCents: persisted.globalCapCents, categoryCapsCents: {}, merchantAllowlist: [] },
-    state: { spentCents: persisted.spentCents, spentByCategoryCents: persisted.spentByCategory },
+    rail: store,
+    guardrails: { globalCapCents, categoryCapsCents: {}, merchantAllowlist: [] },
+    state: { spentCents, spentByCategoryCents },
   };
 }
 
@@ -137,11 +139,9 @@ function shapeArgs(name: string, args: Record<string, unknown>): Record<string, 
 }
 
 type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean };
-
 const errorResult = (text: string): ToolResult => ({ content: [{ type: "text", text }], isError: true });
 const okResult = (value: unknown): ToolResult => ({ content: [{ type: "text", text: JSON.stringify(value, null, 2) }] });
 
-/** Validate required args, load persisted wallet, run the tool, persist on spend/cap change. */
 async function callTool(env: McpEnv, name: string, args: Record<string, unknown>): Promise<ToolResult> {
   if (!TOOL_SCHEMAS[name]) return errorResult(`unknown tool: ${name}`);
 
@@ -151,20 +151,17 @@ async function callTool(env: McpEnv, name: string, args: Record<string, unknown>
   });
   if (missing.length > 0) return errorResult(`missing required argument(s): ${missing.join(", ")}`);
 
-  const persisted = await loadState(env);
-  const deps = buildDeps(env, persisted);
+  const deps = await buildDeps(env);
   const tools = new Map<string, ToolDef>(buildTools(deps).map((t) => [t.spec.name, t] as const));
   const tool = tools.get(name);
   if (!tool) return errorResult(`unknown tool: ${name}`);
 
   try {
     const result = await tool.handler(shapeArgs(name, args));
-    if (name === "pay_and_run" || name === "approve") {
-      await saveState(env, {
-        spentCents: deps.state.spentCents,
-        spentByCategory: deps.state.spentByCategoryCents,
-        globalCapCents: deps.guardrails.globalCapCents,
-      });
+    // Spend is persisted atomically by the DO store during pay_and_run; only the cap needs
+    // an explicit write-back after approve.
+    if (name === "approve") {
+      await walletOp(walletStub(env), "setCap", { newCapCents: deps.guardrails.globalCapCents });
     }
     return okResult(result);
   } catch (e) {
@@ -191,7 +188,7 @@ export async function handleMcp(request: Request, env: McpEnv): Promise<Response
     return json({ result });
   }
 
-  // MCP JSON-RPC (stateless)
+  // MCP JSON-RPC (stateless transport; wallet state lives in the DO)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleOne = async (req: any): Promise<unknown | null> => {
     const id = req?.id ?? null;
@@ -200,7 +197,7 @@ export async function handleMcp(request: Request, env: McpEnv): Promise<Response
       return rpcOk(id, {
         protocolVersion: SUPPORTED_PROTOCOL,
         capabilities: { tools: {} },
-        serverInfo: { name: "intendr", version: "0.1.0" },
+        serverInfo: { name: "intendr", version: "0.2.0" },
         instructions: SERVER_INSTRUCTIONS,
       });
     }
