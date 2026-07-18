@@ -12,10 +12,10 @@
 | Package manager / workspaces | **Bun workspaces** | Matches Abdullah's `ortha` (the demo we reuse from); already installed. |
 | Language | **TypeScript** (strict, NodeNext), TS project references | One language across apps + packages. |
 | Task runner | **Turborepo** (thin, optional) | Cached builds + `dev`/`deploy` pipelines across workspaces. Bun scripts work too. |
-| Hosting | **Cloudflare** end-to-end | Reuses ortha's edge design (Workers + Durable Objects + D1 + KV); one vendor. |
-| Backend + MCP | **Cloudflare Worker** (`apps/edge`) | Serves the MCP endpoint *and* the dashboard API from one Worker. |
-| MCP transport | **WebStandard Streamable HTTP** (fetch-based) | The Workers-compatible transport from `@modelcontextprotocol/sdk` (supersedes the Railway/Render note in PLAN.md). |
-| Frontends | **Cloudflare Pages** | `apps/web` (dashboard) + `apps/landing` (marketing). |
+| Hosting | **Hybrid: Cloudflare (backend) + Vercel (frontends)** | Stateful MCP/backend where the primitives fit best; frontend DX + previews on Vercel. |
+| Backend + MCP | **Cloudflare Worker** (`apps/edge`) via **`McpAgent`** (agents SDK, Durable-Object-backed) | Serves the MCP endpoint *and* the dashboard API from one Worker; `McpAgent` is purpose-built for stateful remote MCP. |
+| MCP transport | **Streamable HTTP + SSE via `McpAgent`** | DO-backed transport from Cloudflare's `agents` SDK — no hand-rolled transport, no Railway/Render (supersedes PLAN.md's note). |
+| Frontends | **Vercel** | `apps/web` (dashboard) + `apps/landing` (marketing) as two Vercel projects. |
 | Frontend stack | **React + Vite** (dashboard), **Astro** (landing) | Dashboard mirrors ortha's React app; Astro is ideal for a fast static marketing site. |
 
 > These are defaults, not dogma — see [§9 Open decisions](#9-open-decisions).
@@ -27,9 +27,9 @@
 ```
 intendr/
 ├─ apps/
-│  ├─ landing/                 # Marketing site (Astro) → Cloudflare Pages
-│  ├─ web/                     # App dashboard (React + Vite SPA) → Cloudflare Pages
-│  └─ edge/                    # Cloudflare Worker: MCP server + dashboard API + Durable Objects
+│  ├─ landing/                 # Marketing site (Astro) → Vercel
+│  ├─ web/                     # App dashboard (React + Vite SPA) → Vercel
+│  └─ edge/                    # Cloudflare Worker (McpAgent/DO): MCP server + dashboard API
 │
 ├─ packages/
 │  ├─ contracts/               # Frozen interfaces + shared types (the seams)
@@ -66,13 +66,13 @@ intendr/
 
 ## 2. Apps
 
-### `apps/landing` — marketing site (Cloudflare Pages)
+### `apps/landing` — marketing site (Vercel)
 - **Stack:** Astro (static/SSG), minimal JS. Optionally Tailwind.
 - **Purpose:** the pitch, "how it works," and a CTA to sign in / get your MCP URL. Fast, SEO-friendly, near-zero runtime.
-- **Deploy:** Cloudflare Pages, output `dist/`.
+- **Deploy:** Vercel (project Root Directory `apps/landing`), Astro build output `dist/`.
 - **Key files:** `astro.config.mjs`, `src/pages/index.astro`, `public/`, `wrangler.toml` (Pages project name) or Pages dashboard config.
 
-### `apps/web` — app dashboard (Cloudflare Pages)
+### `apps/web` — app dashboard (Vercel)
 - **Stack:** React + Vite SPA (mirrors ortha's `apps/web`). Talks to `apps/edge` over REST + WebSocket.
 - **Purpose (the control plane for the wallet):**
   - Sign in; create/select a workspace.
@@ -81,13 +81,13 @@ intendr/
   - **MCP connection:** generate + copy the `/mcp` URL and a scoped token to paste into any chatbot.
   - **Activity/trace:** live tool-call trace (reuse ortha's trace-block UI), receipts, `expand_result` raw view.
   - **Approvals:** resolve pending over-cap / side-effect payments (approve / raise cap / skip).
-- **Deploy:** Cloudflare Pages, output `dist/`; API calls hit the Worker's custom domain.
+- **Deploy:** Vercel (project Root Directory `apps/web`); talks to the Worker at `api.intendr.app` (CORS-allowed), with `PUBLIC_API_URL` set per Vercel environment.
 - **Key files:** `vite.config.ts`, `src/main.tsx`, `src/routes/*`, `index.html`.
 
 ### `apps/edge` — the Worker (backend + MCP server)
-- **Stack:** Cloudflare Worker (TypeScript, `wrangler`), Hono (or itty-router) for routing.
+- **Stack:** Cloudflare Worker (TypeScript, `wrangler`) using Cloudflare's **`agents` SDK `McpAgent`** (Durable-Object-backed) for the MCP surface, Hono for the REST routes. **CORS** allow-lists the Vercel frontend origins.
 - **Routes:**
-  - `POST /mcp` — **MCP Streamable HTTP** endpoint (WebStandard transport). Exposes the tools from `packages/mcp`; every `pay_and_run` flows through budget + guardrails + providers.
+  - `POST /mcp` (+ SSE) — **MCP endpoint via `McpAgent`** (DO-backed, Streamable HTTP/SSE). Exposes the tools from `packages/mcp`; every `pay_and_run` flows through budget + guardrails + providers.
   - `GET/POST /api/*` — dashboard API: auth/sessions, wallet CRUD, caps, allowlist, transactions, approvals, rail connection, MCP token issuance.
   - `GET /api/*/stream` (WebSocket) — live trace to the dashboard.
   - `POST /webhooks/*` — payment-rail settlement callbacks (Ramp / x402).
@@ -120,9 +120,9 @@ intendr/
 
 | Workspace | Cloudflare product | Build output | Notes |
 |---|---|---|---|
-| `apps/landing` | **Pages** | `dist/` | Static/SSG. Custom domain `intendr.app` (apex). |
-| `apps/web` | **Pages** | `dist/` | SPA. Subdomain `app.intendr.app`. |
-| `apps/edge` | **Workers** | Worker bundle | API + MCP. `api.intendr.app` (and `/mcp` there). |
+| `apps/landing` | **Vercel** | `dist/` | Astro static/SSG. Custom domain `intendr.app` (apex). |
+| `apps/web` | **Vercel** | `dist/` | React SPA. Subdomain `app.intendr.app`. |
+| `apps/edge` | **Cloudflare Workers** | Worker bundle | API + MCP (McpAgent/DO). `api.intendr.app` (and `/mcp`). |
 
 ### 4.2 Bindings (on `apps/edge`)
 
@@ -147,11 +147,11 @@ apps/edge/
 └─ src/index.ts            # fetch handler (router) + Durable Object export
 
 apps/web/
-├─ wrangler.toml            # Pages project name (or configure in dashboard)
+├─ vercel.json             # Vercel config (build/output, SPA rewrites); Root Directory = apps/web
 └─ (Vite build → dist/)
 
 apps/landing/
-├─ wrangler.toml            # Pages project name
+├─ vercel.json             # Vercel config; Root Directory = apps/landing
 └─ (Astro build → dist/)
 ```
 
@@ -177,8 +177,16 @@ routes = [{ pattern = "api.intendr.app/*", zone_name = "intendr.app" }]
 ```
 
 ### 4.4 Environments & domains
-- **Preview**: every PR → Pages preview URLs + a `--env preview` Worker (`api-preview.intendr.app`). Ephemeral D1/KV or a shared preview DB.
-- **Production**: `intendr.app` (landing), `app.intendr.app` (dashboard), `api.intendr.app` (Worker + `/mcp`).
+- **Preview**: every PR → **Vercel preview URLs** (both frontends) + a `--env preview` Worker (`api-preview.intendr.app`). Ephemeral D1/KV or a shared preview DB. Point preview frontends at the preview API via `PUBLIC_API_URL`.
+- **Production**: `intendr.app` (landing, Vercel), `app.intendr.app` (dashboard, Vercel), `api.intendr.app` (Worker + `/mcp`, Cloudflare).
+
+### 4.5 Cross-platform wiring (the hybrid tax)
+
+Splitting frontends (Vercel) from the backend (Cloudflare) adds a little glue — plan for it:
+- **CORS**: the Worker allow-lists the Vercel origins (`https://app.intendr.app`, `https://intendr.app`, and `*.vercel.app` previews) on `/api/*` and `/mcp`.
+- **Config, not hard-coding**: frontends read `PUBLIC_API_URL=https://api.intendr.app` at build time (Vite/Astro env); nothing points at a hard-coded host.
+- **Auth across domains**: keep both frontends and the Worker under the shared `intendr.app` parent (Vercel serves `app.`/apex; Cloudflare serves `api.`) so a session cookie with `Domain=.intendr.app; Secure; SameSite=Lax` works across both. If you don't want shared-domain cookies, use bearer tokens for the dashboard API and a scoped token for `/mcp`.
+- **Two control planes**: you now watch Vercel (frontends) *and* Cloudflare (Worker/D1/DO/KV). CI reflects the split (§7).
 
 ---
 
@@ -215,10 +223,10 @@ Root `package.json` scripts wrap Turborepo pipelines; each app owns its own `dev
 1. `bun install` → `bun run typecheck` → `bun run test`.
 2. **D1 migrations**: `wrangler d1 migrations apply intendr` (prod, gated on main).
 3. **Worker**: `wrangler deploy` (`apps/edge`, `--env production`).
-4. **Pages**: `wrangler pages deploy apps/web/dist --project-name intendr-web` and `... apps/landing/dist --project-name intendr-landing`.
-5. PRs deploy to preview targets; `main` deploys to production.
+4. **Frontends**: deployed by **Vercel's Git integration** — two Vercel projects with Root Directories `apps/web` and `apps/landing`; automatic preview per PR, production on `main`. No wrangler/GH-Actions step for the frontends.
+5. Worker preview via `wrangler deploy --env preview` on PRs; production on `main`. Set `PUBLIC_API_URL` per Vercel environment to match the corresponding API.
 
-Requires repo secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
+Requires repo secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` (Worker + D1). Vercel deploys via its own Git integration (no GH secret needed) — or add `VERCEL_TOKEN` if you prefer running `vercel deploy` from CI.
 
 ---
 
@@ -257,7 +265,7 @@ Placeholders so these slot in without reshaping the repo:
 - **More payment rails** (`packages/wallet/*`): Stripe Link, Google AP2, Coinbase CDP — each implements `PaymentRail`.
 - **`apps/mobile`** (Expo/React Native) — wallet approvals + push notifications on the go.
 - **`packages/cli`** — an `intendr` CLI to manage wallets/caps and print the MCP URL.
-- **`apps/docs`** — developer docs / API reference (Cloudflare Pages).
+- **`apps/docs`** — developer docs / API reference (Vercel, alongside the other frontends).
 - **`packages/llm` + in-dashboard test agent** — a built-in chat to exercise the tools without an external chatbot.
 - **Analytics / observability** — per-turn metrics (Workers Analytics Engine), spend dashboards.
 - **Teams / multi-tenant** — shared workspaces, roles, org-level caps and audit export.
