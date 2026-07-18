@@ -14,3 +14,4 @@ export {
   Skeleton,
 } from "./components/primitives";
 export { SpendMeter } from "./components/SpendMeter";
+export { CreditCard, type CardColor, type CardFace } from "./components/CreditCard";
