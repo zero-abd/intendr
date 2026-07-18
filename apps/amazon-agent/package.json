@@ -1,0 +1,28 @@
+{
+  "name": "@intendr/amazon-agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Node service that drives Amazon in a real browser for the AmazonProvider (a Worker can't run Playwright). Mock-first; live behind AMAZON_LIVE=1.",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@intendr/commerce": "workspace:*"
+  },
+  "optionalDependencies": {
+    "patchright": "^1.58.2"
+  },
+  "devDependencies": {
+    "@intendr/budget": "workspace:*",
+    "@intendr/contracts": "workspace:*",
+    "@intendr/guardrails": "workspace:*",
+    "@intendr/mcp": "workspace:*",
+    "@intendr/providers": "workspace:*",
+    "@intendr/wallet": "workspace:*",
+    "@types/node": "^20.11.0",
+    "tsx": "^4.19.2"
+  }
+}

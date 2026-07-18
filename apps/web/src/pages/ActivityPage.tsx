@@ -3,7 +3,7 @@ import { Badge, Button, Card, Eyebrow } from "@intendr/ui";
 import { useData } from "../hooks/DataProvider";
 import { useAuth } from "../auth/AuthProvider";
 import { addTransaction, totalSpent } from "../api/transactions";
-import { fmtCents, relativeTime } from "../lib/format";
+import { fmtCents, formatService, relativeTime } from "../lib/format";
 import type { TxStatus } from "../api/types";
 
 const STATUS_TONE: Record<TxStatus, "good" | "warn" | "danger" | "neutral" | "accent"> = {
@@ -14,11 +14,16 @@ const STATUS_TONE: Record<TxStatus, "good" | "warn" | "danger" | "neutral" | "ac
   blocked: "danger",
 };
 
-// Seed rows mirror the PLAN.md hero demo — so a fresh account isn't empty.
+// Seed rows model real consumer spend from brands you can order from — so a
+// fresh account isn't empty and the feed reads like an agent shopping for you.
 const DEMO_ROWS = [
-  { service: "orthogonal · enrich venue", cents: 3, status: "settled" as TxStatus },
-  { service: "doordash · burger", cents: 1850, status: "settled" as TxStatus },
-  { service: "uber · SFO → downtown", cents: 2800, status: "blocked" as TxStatus },
+  { service: "amazon · anker usb-c charger", cents: 2499, status: "settled" as TxStatus },
+  { service: "doordash · chipotle burrito bowl", cents: 1685, status: "settled" as TxStatus },
+  { service: "uber · ride to SFO", cents: 3120, status: "settled" as TxStatus },
+  { service: "instacart · whole foods groceries", cents: 8740, status: "settled" as TxStatus },
+  { service: "starbucks · oat milk latte", cents: 675, status: "settled" as TxStatus },
+  { service: "uber eats · late-night ramen", cents: 2450, status: "pending" as TxStatus },
+  { service: "amazon · dyson v15 vacuum", cents: 42999, status: "blocked" as TxStatus },
 ];
 
 export function ActivityPage() {
@@ -77,7 +82,7 @@ export function ActivityPage() {
             <div className="empty__glyph" aria-hidden>◎</div>
             <p className="muted">No transactions yet.</p>
             <p style={{ fontSize: 13, color: "var(--ink-faint)" }}>
-              Load the demo to preview the SFO hero flow — a 3¢ enrich, an $18.50 burger, and a $28 ride blocked at the cap.
+              Load the demo to preview real agent spend — an Amazon order, a DoorDash lunch, an Uber ride, groceries, and a $429 vacuum blocked at the cap.
             </p>
           </div>
         ) : (
@@ -86,7 +91,7 @@ export function ActivityPage() {
               <li key={t.id} className="tx tx--full">
                 <div className="tx__dot" data-status={t.status} />
                 <div className="tx__main">
-                  <span className="tx__service">{t.service}</span>
+                  <span className="tx__service" title={t.service}>{formatService(t.service)}</span>
                   <span className="tx__time">{relativeTime(t.created_at)}</span>
                 </div>
                 <Badge tone={STATUS_TONE[t.status]}>{t.status}</Badge>
