@@ -35,7 +35,11 @@ bun run dev          # turbo: landing + web (Vite) + edge (wrangler dev)
 bun --cwd apps/edge run dev     # just the Worker (MCP + API) at http://localhost:8787
 bun --cwd apps/web run dev      # just the dashboard
 bun --cwd apps/landing run dev  # just the marketing site
+
+ORTHOGONAL_API_KEY=sk-... bun --cwd apps/mcp run start   # the MCP connector (stdio) other agents add
 ```
+
+**MCP connector** (`apps/mcp`): a real stdio MCP server any agent can add (Claude Desktop/Code, Cursor, …). It exposes the **entire Orthogonal catalog** (discovered at runtime via `search_services` → `get_service` → `pay_and_run`) plus commerce providers (Uber, DoorDash) — all metered through the spend-capped wallet. See [`apps/mcp/README.md`](apps/mcp/README.md).
 
 Hosting is **hybrid**: `apps/edge` → Cloudflare Workers (MCP + API + Durable Objects); `apps/web` + `apps/landing` → Vercel. The ECC agent harness under `.claude/` is installed per-developer (see [SKILLS_SETUP.md](SKILLS_SETUP.md)) and is not committed.
 
