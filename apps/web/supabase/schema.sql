@@ -23,7 +23,7 @@ create policy "profiles: update own" on public.profiles
 -- ── wallets ─────────────────────────────────────────────────
 create table if not exists public.wallets (
   user_id           uuid primary key references auth.users (id) on delete cascade,
-  balance_cents     integer not null default 0,
+  balance_cents     integer not null default 5000,   -- $50.00 welcome credit on signup
   session_cap_cents integer not null default 4500,   -- $45.00 (matches the demo cap)
   monthly_cap_cents integer not null default 100000, -- $1,000.00
   category_caps     jsonb   not null default '{}'::jsonb,

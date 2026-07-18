@@ -82,7 +82,36 @@ intendr/
   - **Activity/trace:** live tool-call trace (reuse ortha's trace-block UI), receipts, `expand_result` raw view.
   - **Approvals:** resolve pending over-cap / side-effect payments (approve / raise cap / skip).
 - **Deploy:** Vercel (project Root Directory `apps/web`); talks to the Worker at `api.intendr.app` (CORS-allowed), with `PUBLIC_API_URL` set per Vercel environment.
-- **Key files:** `vite.config.ts`, `src/main.tsx`, `src/routes/*`, `index.html`.
+- **Key files:** `vite.config.ts`, `src/main.tsx`, `src/pages/*`, `src/api/*`, `src/lib/supabase.ts`, `index.html`.
+
+#### Running `apps/web` locally
+
+The dashboard talks to **Supabase directly** (auth + wallet/transactions) — no local Worker needed for the wallet UI. Two build-time env vars are required; without them the app renders a "connect Supabase" onboarding screen instead of the authed UI.
+
+```bash
+bun install                                    # from the repo root (installs + links workspaces)
+cp apps/web/.env.example apps/web/.env.local   # then fill in the two VITE_ vars below
+bun run --cwd apps/web dev                      # dashboard at http://localhost:5173
+```
+
+`apps/web/.env.local` (git-ignored — never commit it):
+
+```
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon / publishable key — safe in the browser; RLS protects data>
+```
+
+Get both from the Supabase dashboard → Project Settings → API. Use the **anon/publishable** key, never `service_role`. Restart Vite after editing `.env.local` (Vite only reads env at startup).
+
+Build / typecheck the web app in isolation:
+
+```bash
+bun run --cwd apps/web build       # NOTE: flag goes AFTER `run`. `bun --cwd apps/web run build`
+bun run --cwd apps/web typecheck   # is misparsed by bun 1.3.x and just prints help.
+# or, from the repo root, via turbo:  bun run build --filter '@intendr/web'
+```
+
+**Supabase schema:** run `apps/web/supabase/schema.sql` then `apps/web/supabase/002_cards.sql` once in the SQL editor. A signup trigger auto-provisions a `profiles` + `wallets` row; new wallets start with a **$50 welcome credit** (`balance_cents` default `5000`). RLS scopes every table to `auth.uid()`.
 
 ### `apps/edge` — the Worker (backend + MCP server)
 - **Stack:** Cloudflare Worker (TypeScript, `wrangler`) using Cloudflare's **`agents` SDK `McpAgent`** (Durable-Object-backed) for the MCP surface, Hono for the REST routes. **CORS** allow-lists the Vercel frontend origins.
