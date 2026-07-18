@@ -1,0 +1,22 @@
+{
+  "name": "striderlabs-mcp-smoke",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Isolated MCP smoke-test harness for a representative sample of @striderlabs/* MCP servers. No real accounts, no real orders — initialize handshake + tools/list only.",
+  "scripts": {
+    "test": "node smoke-test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "@striderlabs/mcp-doordash": "0.5.0",
+    "@striderlabs/mcp-airbnb": "1.1.1",
+    "@striderlabs/mcp-spotify": "0.1.0",
+    "@striderlabs/mcp-gmail": "0.1.1",
+    "@striderlabs/mcp-amazon": "0.2.0",
+    "@striderlabs/mcp-uber": "0.2.1",
+    "@striderlabs/mcp-yelp": "0.2.0",
+    "@striderlabs/mcp-googlemaps": "1.0.1",
+    "@striderlabs/mcp-opentable": "0.2.1"
+  }
+}
