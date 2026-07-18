@@ -4,3 +4,5 @@
 export * from "./cards.js";
 export * from "./location.js";
 export * from "./amazon-agent.js";
+// Re-export the HTTP seam so consumers (executor, adapters) get one import surface.
+export type { FetchLike, HttpResponse, HttpRequestInit } from "@intendr/contracts";

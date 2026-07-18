@@ -14,13 +14,20 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import {
   amazonAgentMock,
+  consumeCardCredentials,
   type AmazonPurchaseRequest,
   type AmazonPurchaseResponse,
   type AmazonSearchRequest,
+  type FetchLike,
 } from "@intendr/commerce";
 
 const PORT = Number(process.env.PORT ?? 8899);
 const LIVE = process.env.AMAZON_LIVE === "1";
+// Executor config for redeeming real card credentials from apps/virtual-cards.
+const VIRTUAL_CARDS_URL = process.env.VIRTUAL_CARDS_URL;
+const INTERNAL_SERVICE_TOKEN = process.env.INTERNAL_SERVICE_TOKEN;
+const EXECUTOR_ID = process.env.CHECKOUT_EXECUTOR_ID ?? "amazon-agent";
+const nodeFetch: FetchLike = (url, init) => globalThis.fetch(url, init as RequestInit) as unknown as ReturnType<FetchLike>;
 
 function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
@@ -48,19 +55,43 @@ const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
 // Kept isolated so mock mode never imports patchright. Fully wiring the browser
 // automation (selectors, login, card entry, place-order) is the work described in
 // test/mcp-smoke/AMAZON-MCP-RESEARCH.md — this is the integration seam for it.
-async function livePurchase(_req: AmazonPurchaseRequest): Promise<AmazonPurchaseResponse> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  let chromium: unknown;
+async function livePurchase(req: AmazonPurchaseRequest): Promise<AmazonPurchaseResponse> {
+  // 1. Obtain the card credentials to enter at checkout.
+  //    - Real flow: redeem the one-time PAN from apps/virtual-cards (PAN stays server-side here).
+  //    - Mock instrument: use it directly.
+  let pan: string | undefined;
+  let cvv: string | undefined;
+  if (req.cardRef) {
+    if (!VIRTUAL_CARDS_URL || !INTERNAL_SERVICE_TOKEN) {
+      throw new Error("cardRef supplied but VIRTUAL_CARDS_URL / INTERNAL_SERVICE_TOKEN are unset (executor can't redeem the PAN)");
+    }
+    const creds = await consumeCardCredentials(
+      { fetch: nodeFetch, baseUrl: VIRTUAL_CARDS_URL, internalServiceToken: INTERNAL_SERVICE_TOKEN, executorId: EXECUTOR_ID },
+      req.cardRef,
+    );
+    const data = creds.cardData as { pan?: string; cvv?: string } | undefined;
+    pan = data?.pan;
+    cvv = data?.cvv;
+    if (!pan) throw new Error("virtual-cards returned no PAN for this program — use Lithic's secure card element (getEmbedURL) with lithicCardToken");
+  } else if (req.card) {
+    pan = req.card.pan;
+    cvv = req.card.cvv;
+  } else {
+    throw new Error("no card supplied for a confirmed live purchase");
+  }
+
+  // 2. Drive the browser to purchase, entering the PAN at checkout.
   try {
-    ({ chromium } = (await import("patchright")) as { chromium: unknown });
+    await import("patchright");
   } catch {
     throw new Error("AMAZON_LIVE=1 but 'patchright' is not installed. Run: npm i patchright && npx patchright install chromium");
   }
   // TODO(agent): drive the browser per AMAZON-MCP-RESEARCH.md §6/§9 —
   //   1. ensure logged-in session, 2. search/select product, 3. set delivery address,
-  //   4. add to cart -> checkout, 5. if confirm: enter req.card at the payment step and
-  //      click Place Order, verify the order id (never fabricate), 6. return the real total.
-  throw new Error("live Amazon purchase not yet wired — see test/mcp-smoke/amazon-mcp-starter (browser.ts TODO(agent)). Use mock mode (unset AMAZON_LIVE).");
+  //   4. add to cart -> checkout, 5. enter pan/cvv at the payment step and click Place Order,
+  //      verify the order id (never fabricate), 6. return the real total.
+  void pan; void cvv;
+  throw new Error("live checkout not yet wired — credential redemption is in place; browser card-entry is the remaining TODO (see test/mcp-smoke/amazon-mcp-starter).");
 }
 
 async function handle(op: string, payload: Record<string, unknown>): Promise<unknown> {
