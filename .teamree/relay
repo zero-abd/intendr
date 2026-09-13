@@ -1,0 +1,10 @@
+# The relay this project meets on.
+#
+# Two machines behind two routers cannot reach each other, so each opens an
+# outbound WebSocket to a relay your team runs and the relay splices them
+# together. It is never trusted with content: everything across it is a Noise
+# session keyed from the public keys in .teamree/members, so the relay sees
+# ciphertext and nothing else.
+#
+# One ws:// or wss:// URL, ending in the relay’s path. See relay/README.md.
+wss://teamree-relay.almahmud-zero.workers.dev/v1/relay

@@ -1,0 +1,12 @@
+# teamree member
+#
+# Push access to this repository is what makes this membership: whoever can
+# add a key here is on the team, and whoever loses push access stops being
+# able to change it. There is no second list anywhere.
+#
+# This is the public half of an X25519 keypair. The private half never
+# leaves the machine that generated it and is never written to a repository.
+
+handle: almahmud.zero
+key: x25519 GLXiyajR7nmX61rUbdy0qnq5kULLHLEMGiQ54QF3OWg=
+added: 2026-09-13
