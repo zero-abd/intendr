@@ -1,70 +1,154 @@
 # intendr
 
-**A spend-capped wallet any AI agent can pay with.** One MCP server that gives any chatbot's agent a real, budget-controlled wallet — so it can pay for both **data APIs** and **real-world commerce** (order food, book a ride) while a budget engine makes sure it *can't* overspend.
+**A spend-capped wallet any AI agent can pay with, over MCP.** Add one connector to Claude,
+Cursor or ChatGPT desktop and the agent gets a wallet with a hard budget and a catalog of
+paid capabilities. It stops itself the moment a purchase would break the cap.
 
-> Ramp Hackathon project. Working names: intendr (née *Tab* / *Purse*).
+Built at the Ramp Hackathon. Dashboard: **[intendr-edge.vercel.app](https://intendr-edge.vercel.app)**
 
-## One-liner
+## The problem
 
-Paste one URL into any MCP-capable chatbot (Claude, ChatGPT, Cursor) and the agent gets money with a cap plus a catalog of paid capabilities. It can enrich a company for 3¢, order a burger through DoorDash's CLI, and book an Uber — and it **stops itself** the moment a purchase would break the budget.
+Agents can increasingly do things that cost money, and there is no safe, portable way to
+give one a budget. Handing an agent your card is reckless. Wiring payments and limits into
+every chatbot separately is toil. intendr is one MCP endpoint that provides:
+
+1. **A wallet with caps.** Balance, global cap, per-category caps and a merchant allowlist.
+2. **A catalog of paid capabilities.** The Orthogonal data API catalog (company enrichment,
+   people search, email verification, funding, news) plus commerce providers.
+3. **Governance on every call.** Reserve, run, then settle or refund. Real-world actions
+   always stop for the user's approval, and raising the cap can never approve one silently.
 
 ## Connect it
-
-One command — no key, no config:
 
 ```bash
 claude mcp add intendr -- npx -y intendr
 ```
 
-Or add it as a stdio MCP server in Cursor / ChatGPT desktop: `command: npx`, `args: ["-y", "intendr"]`. Then ask your agent to `search_services`, `get_service`, and `pay_and_run`.
+Any other MCP client takes the same stdio server:
 
-intendr runs **one shared Orthogonal key + spend-capped wallet server-side** — users bring nothing. (Per-user identity & billing via OAuth is on the roadmap.) The connector is a thin proxy to the hosted Worker; see [`apps/mcp/README.md`](apps/mcp/README.md).
+```json
+{ "mcpServers": { "intendr": { "command": "npx", "args": ["-y", "intendr"] } } }
+```
 
-## Why
+On first run the connector opens a browser to sign in (a device-code flow, so nothing
+listens on a local port). After that the agent spends against your own wallet. The
+Orthogonal key stays on the server; you never handle one.
 
-AI agents can increasingly *do* things that cost money, but there's no safe, portable way to hand one a budget. Giving an agent your card is reckless; wiring bespoke payment + limits into every chatbot is toil. intendr is the missing layer: a single MCP endpoint offering (1) a spend-capped wallet, (2) a catalog of paid capabilities spanning data + commerce, and (3) governance — reserve→settle budgeting, approval gates for expensive or real-world actions, and per-category/merchant limits.
+## MCP tools
 
-## What makes it stand out
+| Tool | What it does |
+| --- | --- |
+| `search_services` | Find paid capabilities by natural language |
+| `get_service` | Price, side effect and input schema for one capability |
+| `pay_and_run` | Pay for and run a capability under the wallet's spend controls |
+| `get_wallet` / `get_spend_summary` | Balance, caps, spent, overspend blocked, remaining |
+| `approve` | Approve, raise a cap, or skip a gated payment |
 
-1. **Portable MCP surface** — works from *any* chatbot, not one bespoke app.
-2. **Real money** — the balance is a real spendable wallet behind a pluggable payment rail.
-3. **Real-world commerce, not just data** — one wallet pays for API calls *and* DoorDash *and* Uber.
-4. **Guardrails that visibly work** — the agent gets blocked live when it tries to overspend.
+## Architecture
+
+```mermaid
+flowchart LR
+    A["AI agent<br/>Claude, Cursor, ChatGPT"] -- stdio --> C["npx intendr<br/>MCP connector"]
+    C -- "HTTPS + Bearer token" --> E["Edge Worker<br/>Cloudflare Workers, Hono"]
+    E --> G["Guardrails + budget<br/>caps, allowlist, side-effect gate,<br/>reserve / settle / refund"]
+    G --> P["Providers"]
+    P --> O["Orthogonal API catalog"]
+    P --> AM["Amazon checkout executor<br/>Node, real browser"]
+    AM --> VC["Virtual cards service<br/>Lithic single-use cards"]
+    E -- "mcp_wallet / mcp_charge RPC" --> S[("Supabase Postgres<br/>wallets + ledger")]
+    W["Dashboard<br/>React + Vite on Vercel"] --> S
+```
+
+- **The charge is one atomic statement.** `mcp_charge` debits the balance and writes the
+  ledger row in a single Postgres update, so concurrent calls cannot overspend and every
+  purchase shows up in the dashboard.
+- **Card numbers never reach the model or the edge.** The edge handles a one-time token;
+  the checkout executor redeems the card server-side, uses it once, and the single-use card
+  closes itself.
+- **One contract for every provider.** Each provider implements `search`, `details` and
+  `run`, so a data API and a real-world purchase go through the same budget path.
+
+## Repository layout
+
+```
+apps/
+  edge/            Cloudflare Worker: MCP endpoint, device-code login, wallet RPCs
+  mcp/             the npx connector (stdio MCP server proxying to the edge)
+  web/             wallet dashboard: auth, wallet, cards, transactions (Supabase)
+  landing/         marketing site (Astro)
+  virtual-cards/   Lithic single-use card issuance for approved purchases
+  amazon-agent/    Node service that drives Amazon checkout in a real browser
+packages/
+  contracts/       shared interfaces and types
+  budget/          reserve, settle and refund engine
+  guardrails/      global and category caps, merchant allowlist, side-effect gate
+  providers/       Orthogonal, Amazon, Uber, DoorDash providers
+  commerce/        card issuers, location, Amazon client
+  wallet/ mcp/ harness/ db/ ui/
+test/mcp-smoke/    research on third-party commerce MCP servers
+docs/              PLAN.md (product) and MONOREPO.md (repo shape and hosting)
+```
+
+## Tech stack
+
+TypeScript, Bun workspaces, Turborepo · Cloudflare Workers, Hono ·
+Model Context Protocol SDK, Zod · Supabase (Postgres, auth) · React, Vite, React Router ·
+Astro · Express, Lithic, Pino · Vitest
+
+## Run it locally
+
+Requires [Bun](https://bun.sh) 1.3.
+
+```bash
+bun install
+bun run typecheck                 # tsc across every workspace
+bun run dev                       # landing, dashboard and edge Worker together
+
+bun run --cwd apps/edge dev       # just the Worker, http://localhost:8787
+bun run --cwd apps/web dev        # just the dashboard
+bun run --cwd apps/landing dev    # just the marketing site
+bun run --cwd apps/virtual-cards test
+```
+
+Put per-app flags after `run` (`bun run --cwd apps/web build`); on Bun 1.3 the
+`bun --cwd apps/web run build` form prints Bun's help instead.
+
+**Configuration.**
+
+- The dashboard needs Supabase: copy `apps/web/.env.example` to `apps/web/.env.local` and
+  set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Schema and RPCs are in
+  `apps/web/supabase/` (`schema.sql`, then `002_cards.sql`, then `003_mcp_rpcs.sql`). Full
+  steps: [docs/MONOREPO.md](docs/MONOREPO.md#running-appsweb-locally).
+- The Worker reads `ORTHOGONAL_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` and
+  `SUPABASE_ANON_KEY` as Wrangler secrets; see `apps/edge/.dev.vars.example`.
+- The virtual-cards service defaults to demo mode; see
+  [apps/virtual-cards/README.md](apps/virtual-cards/README.md).
+- Point the connector at a local Worker with `INTENDR_URL=http://localhost:8787`.
 
 ## Status
 
-Monorepo scaffolded (Bun workspaces + Turborepo). `apps/{landing,web,edge}` + `packages/{contracts,budget,wallet,providers,guardrails,harness,mcp,db,ui}`. The MCP tool surface (`get_wallet`, `search_services`, `get_service`, `pay_and_run`, `get_spend_summary`, `approve`) and the atomic reserve→settle pay path are wired with in-memory stubs and typecheck green; real providers, rails, and Durable-Object persistence are the next steps.
+Hackathon build.
 
-See [`docs/MONOREPO.md`](docs/MONOREPO.md) for the repo structure + Cloudflare/Vercel hosting plan, and [`docs/PLAN.md`](docs/PLAN.md) for the product architecture, providers, and demo script.
+| Piece | State |
+| --- | --- |
+| MCP connector, device-code sign-in | Working, published to npm as `intendr` |
+| Edge Worker and Supabase wallet with atomic charge | Working, deployed on Cloudflare |
+| Orthogonal data catalog | Real paid API calls |
+| Guardrails, budget, approval gate | Working |
+| Dashboard | Working, deployed on Vercel |
+| Amazon purchase | Mock by default; real browser checkout behind `AMAZON_LIVE=1` (needs patchright) |
+| Virtual cards | Demo mode by default; Lithic sandbox issuance path included |
+| Uber, DoorDash | Mock providers behind the real provider interface |
 
-## Development
+Funding rails beyond the prepaid wallet (Ramp card, x402) are interface stubs.
 
-```bash
-bun install          # install + link workspaces
-bun run typecheck    # tsc --noEmit across all packages
-bun run dev          # turbo: landing + web (Vite) + edge (wrangler dev)
+## Team
 
-bun run --cwd apps/edge dev     # just the Worker (MCP + API) at http://localhost:8787
-bun run --cwd apps/web dev      # just the dashboard (needs apps/web/.env.local — see below)
-bun run --cwd apps/landing dev  # just the marketing site
+Built at the Ramp Hackathon by Abdullah Al Mahmud ([@zero-abd](https://github.com/zero-abd)),
+Phong Nguyen ([@phongtnguyen2006](https://github.com/phongtnguyen2006)) and Sathvik
+Lakamsani ([@SathvikLakamsani](https://github.com/SathvikLakamsani)).
 
-ORTHOGONAL_API_KEY=sk-... bun run --cwd apps/mcp start   # the MCP connector (stdio) other agents add
-```
+## Contributor tooling
 
-> **Heads up (bun 1.3.x):** put per-app flags **after** `run` — `bun run --cwd apps/web build`. The older `bun --cwd apps/web run build` form is misparsed and just prints bun's help. From the repo root you can also target one app via turbo: `bun run build --filter '@intendr/web'`.
-
-The **dashboard (`apps/web`) needs Supabase env** to leave its onboarding screen: copy `apps/web/.env.example` → `apps/web/.env.local` and fill `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (anon/publishable key). Full local setup + schema steps: [`docs/MONOREPO.md`](docs/MONOREPO.md#running-appsweb-locally).
-
-**MCP connector** (`apps/mcp`): a real stdio MCP server any agent can add (Claude Desktop/Code, Cursor, …). It exposes the **entire Orthogonal catalog** (discovered at runtime via `search_services` → `get_service` → `pay_and_run`) plus commerce providers (Uber, DoorDash) — all metered through the spend-capped wallet. See [`apps/mcp/README.md`](apps/mcp/README.md).
-
-**Commerce provider research** (`test/mcp-smoke`): findings from smoke-testing the `@striderlabs/*` commerce MCP servers (DoorDash, Uber, Amazon, …) that intendr's providers wrap — which reach their site vs. get bot-blocked, the login/session model, and how payment is inherited from the account default. Includes an implementation-ready **[Amazon MCP research spec](test/mcp-smoke/AMAZON-MCP-RESEARCH.md)** and a wired-up TypeScript **[starter skeleton](test/mcp-smoke/amazon-mcp-starter/)** (`index.ts`/`auth.ts` complete; `browser.ts` has `TODO(agent)` scrape stubs). Start at [`test/mcp-smoke/README.md`](test/mcp-smoke/README.md).
-
-Hosting is **hybrid**: `apps/edge` → Cloudflare Workers (MCP + API + Durable Objects); `apps/web` + `apps/landing` → Vercel. The ECC agent harness under `.claude/` is installed per-developer (see [SKILLS_SETUP.md](SKILLS_SETUP.md)) and is not committed.
-
-## Agent tooling
-
-This repo uses the full **[ECC](https://github.com/affaan-m/ECC)** (Everything Claude Code) harness — skills, agents, commands, rules, hooks, and MCP configs — installed **project-local** under `.claude/`. The harness itself is **not committed** (it's ~970 files and gitignored); instead, run one command to install it locally. See **[SKILLS_SETUP.md](SKILLS_SETUP.md)**.
-
-```bash
-npx ecc-universal@latest install --target claude-project --profile full
-```
+Contributors who use Claude Code can install the project-local ECC agent harness; see
+[SKILLS_SETUP.md](SKILLS_SETUP.md). It is gitignored and not needed to build or run intendr.
