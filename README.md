@@ -4,7 +4,9 @@
 Cursor or ChatGPT desktop and the agent gets a wallet with a hard budget and a catalog of
 paid capabilities. It stops itself the moment a purchase would break the cap.
 
-Built at the Ramp Hackathon. Dashboard: **[intendr-edge.vercel.app](https://intendr-edge.vercel.app)**
+Live demo: **[intendr.vercel.app](https://intendr.vercel.app)** · Dashboard: **[intendr-edge.vercel.app](https://intendr-edge.vercel.app)**
+
+Built at the Ramp Hackathon.
 
 ## The problem
 
